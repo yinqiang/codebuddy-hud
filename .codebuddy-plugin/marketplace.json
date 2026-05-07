@@ -13,8 +13,8 @@
       "author": {
         "name": "yinqiang"
       },
-      "homepage": "https://github.com/yinqiang/codebuddy-hud",
-      "repository": "https://github.com/yinqiang/codebuddy-hud",
+      "homepage": "https://github.com/yinqiang/codebuddy-hub",
+      "repository": "https://github.com/yinqiang/codebuddy-hub",
       "license": "MIT",
       "keywords": ["hud", "statusline", "git", "monitoring", "context", "developer-tools"],
       "category": "developer-tools"

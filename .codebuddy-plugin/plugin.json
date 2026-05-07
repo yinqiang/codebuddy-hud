@@ -6,8 +6,8 @@
     "name": "yinqiang",
     "url": "https://github.com/yinqiang"
   },
-  "homepage": "https://github.com/yinqiang/codebuddy-hud",
-  "repository": "https://github.com/yinqiang/codebuddy-hud",
+  "homepage": "https://github.com/yinqiang/codebuddy-hub",
+  "repository": "https://github.com/yinqiang/codebuddy-hub",
   "license": "MIT",
   "keywords": ["hud", "statusline", "monitoring", "codebuddy", "context", "git"],
   "category": "developer-tools",
@@ -25,5 +25,5 @@
   "requirements": {
     "node": ">=18.0.0"
   },
-  "commands": ["./commands/setup.md"]
+  "commands": ["./setup.md"]
 }

@@ -27,7 +27,7 @@
 
 ```bash
 # 添加本仓库为插件市场
-/plugin marketplace add yinqiang/codebuddy-hud
+/plugin marketplace add yinqiang/codebuddy-hub
 
 # 安装插件
 /plugin install codebuddy-hud
@@ -41,7 +41,7 @@
 ### 方式二：克隆构建（手动）
 
 ```bash
-git clone <repo-url> codebuddy-hud
+git clone https://github.com/yinqiang/codebuddy-hub.git codebuddy-hud
 cd codebuddy-hud
 npm ci
 npm run build
