@@ -48,4 +48,12 @@ src/
 ## 当前阶段
 - Phase 1 MVP ✅
 - Phase 2 高级功能 ✅ (transcript 解析 + 多行 HUD + 缓存)
-- Phase 3 增强功能 (待实现)：配置系统完善、多布局模式、自适应、国际化
+- Phase 3 增强功能 ✅ (预设系统 + 主题系统 + i18n + expanded 布局 + 自适应)
+
+## 配置系统
+- 配置合并链: preset → theme → user override
+- 3 种预设: full(全部功能) / essential(核心) / minimal(最简)
+- 5 种主题: default / dracula / solarized / monokai / nord
+- 2 种语言: en(默认) / zh(中文)
+- 2 种布局: compact(单行) / expanded(多行标签)
+- 自适应布局: adaptiveLayout=true 时根据终端宽度自动选择
