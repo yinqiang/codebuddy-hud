@@ -1,7 +1,7 @@
 {
   "name": "codebuddy-hud",
   "owner": {
-    "name": "yinqiangzhu"
+    "name": "yinqiang"
   },
   "description": "CodeBuddy Code statusline HUD marketplace",
   "plugins": [
@@ -11,10 +11,10 @@
       "description": "Real-time statusline HUD for CodeBuddy Code - context health, tool activity, git status, and session stats",
       "version": "0.1.0",
       "author": {
-        "name": "yinqiangzhu"
+        "name": "yinqiang"
       },
-      "homepage": "https://github.com/yinqiangzhu/codebuddy-hud",
-      "repository": "https://github.com/yinqiangzhu/codebuddy-hud",
+      "homepage": "https://github.com/yinqiang/codebuddy-hud",
+      "repository": "https://github.com/yinqiang/codebuddy-hud",
       "license": "MIT",
       "keywords": ["hud", "statusline", "git", "monitoring", "context", "developer-tools"],
       "category": "developer-tools"

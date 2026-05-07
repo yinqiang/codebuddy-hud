@@ -5,7 +5,7 @@
 - **目的**: 为 CodeBuddy Code 创建类似 claude-hud 的实时 statusline HUD 插件
 - **参考项目**: jarrodwatts/claude-hud (21.9k stars, MIT)
 - **技术栈**: TypeScript + Node.js, 零生产依赖
-- **当前阶段**: Phase 1 MVP 完成
+- **当前阶段**: Phase 4 实战集成完成
 
 ## 关键架构决策
 - 使用 CodeBuddy StatusLine API (`statusLine` command 模式)
@@ -49,6 +49,7 @@ src/
 - Phase 1 MVP ✅
 - Phase 2 高级功能 ✅ (transcript 解析 + 多行 HUD + 缓存)
 - Phase 3 增强功能 ✅ (预设系统 + 主题系统 + i18n + expanded 布局 + 自适应)
+- Phase 4 实战集成 ✅ (性能优化 + 真实数据验证 + i18n 修复 + setup 完善)
 
 ## 配置系统
 - 配置合并链: preset → theme → user override
@@ -57,3 +58,18 @@ src/
 - 2 种语言: en(默认) / zh(中文)
 - 2 种布局: compact(单行) / expanded(多行标签)
 - 自适应布局: adaptiveLayout=true 时根据终端宽度自动选择
+
+## Phase 4 性能优化
+- Git 命令并行执行 (Promise.all)，不再串行
+- Fast dirty check: essential/minimal 用 `git diff --quiet HEAD` 替代 `git status --porcelain`
+- 配置感知 git：跳过不需要的 ahead/behind 和 file stats 命令
+- 增量 transcript 解析：>256KB 文件用字节级 tail read，26MB 从 1470ms → 3ms
+- 性能分析：`CODEBUDDY_HUD_PROFILE=1` 环境变量，输出到 stderr
+- Git 缓存 TTL 3s (statusline 每 300ms 刷新，~10 次命中)
+- 实测性能：UE5 大仓库 ~60ms 内部执行，远在 300ms 预算内
+
+## StatusLine API 格式
+- 配置键: `statusLine` (camelCase)，在 `.codebuddy/settings.json`
+- stdin JSON 字段: hook_event_name, session_id, transcript_path, cwd, model{id,display_name}, workspace{current_dir,project_dir}, version, output_style{name}, cost{total_cost_usd,total_duration_ms,total_api_duration_ms,total_lines_added,total_lines_removed}
+- 更新频率: 消息更新时触发，最多每 300ms 一次
+- 输出: stdout 第一行成为 statusline 文本，支持 ANSI 颜色

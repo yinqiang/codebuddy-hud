@@ -27,7 +27,7 @@
 
 ```bash
 # 添加本仓库为插件市场
-/plugin marketplace add yinqiangzhu/codebuddy-hud
+/plugin marketplace add yinqiang/codebuddy-hud
 
 # 安装插件
 /plugin install codebuddy-hud

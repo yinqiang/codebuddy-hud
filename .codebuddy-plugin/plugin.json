@@ -3,11 +3,11 @@
   "version": "0.1.0",
   "description": "Real-time statusline HUD for CodeBuddy Code - context health, tool activity, git status, and session stats",
   "author": {
-    "name": "yinqiangzhu",
-    "url": "https://github.com/yinqiangzhu"
+    "name": "yinqiang",
+    "url": "https://github.com/yinqiang"
   },
-  "homepage": "https://github.com/yinqiangzhu/codebuddy-hud",
-  "repository": "https://github.com/yinqiangzhu/codebuddy-hud",
+  "homepage": "https://github.com/yinqiang/codebuddy-hud",
+  "repository": "https://github.com/yinqiang/codebuddy-hud",
   "license": "MIT",
   "keywords": ["hud", "statusline", "monitoring", "codebuddy", "context", "git"],
   "category": "developer-tools",

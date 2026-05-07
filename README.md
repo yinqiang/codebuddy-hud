@@ -27,7 +27,7 @@ Real-time statusline HUD for [CodeBuddy Code](https://www.codebuddy.cn/) — con
 
 ```bash
 # Add this repo as a plugin marketplace
-/plugin marketplace add yinqiangzhu/codebuddy-hud
+/plugin marketplace add yinqiang/codebuddy-hud
 
 # Install the plugin
 /plugin install codebuddy-hud
