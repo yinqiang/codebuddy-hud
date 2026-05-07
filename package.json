@@ -1,0 +1,39 @@
+{
+  "name": "codebuddy-hud",
+  "version": "0.1.0",
+  "description": "Real-time statusline HUD for CodeBuddy Code - context health, tool activity, git status, and session stats",
+  "type": "module",
+  "main": "dist/index.js",
+  "bin": {
+    "codebuddy-hud": "dist/index.js"
+  },
+  "files": [
+    "dist/",
+    "src/",
+    "commands/",
+    ".codebuddy-plugin/"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "test": "npm run build && node --test",
+    "test:stdin": "npm run build && echo '{\"model\":{\"id\":\"glm-5.1\",\"display_name\":\"GLM-5.1\"},\"workspace\":{\"current_dir\":\"/projects/codebuddy-hud\",\"project_dir\":\"/projects/codebuddy-hud\"},\"cost\":{\"total_cost_usd\":0.0023,\"total_duration_ms\":300000,\"total_api_duration_ms\":15000,\"total_lines_added\":156,\"total_lines_removed\":23},\"session_id\":\"test-session\",\"version\":\"2.9.0\"}' | node dist/index.js"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "codebuddy",
+    "statusline",
+    "hud",
+    "monitoring"
+  ],
+  "author": {
+    "name": "yinqiangzhu"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^22.15.0",
+    "typescript": "^5.8.0"
+  }
+}
