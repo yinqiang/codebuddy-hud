@@ -16,7 +16,10 @@
     "showCodeStats": true,
     "showVersion": false,
     "showSessionId": false,
-    "sessionIdLength": 8
+    "sessionIdLength": 8,
+    "showToolsLine": true,
+    "showAgentsLine": true,
+    "showTodosLine": true
   },
   "colors": {
     "model": "cyan",
@@ -25,6 +28,10 @@
     "gitBranch": "cyan",
     "duration": "dim",
     "cost": "green",
-    "label": "dim"
+    "label": "dim",
+    "toolActive": "brightYellow",
+    "toolCompleted": "brightGreen",
+    "agentActive": "brightCyan",
+    "taskProgress": "cyan"
   }
 }

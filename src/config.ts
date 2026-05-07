@@ -7,7 +7,6 @@
 
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import * as os from 'node:os';
 import type { HudConfig } from './types.js';
 import { DEFAULT_CONFIG } from './types.js';
 
@@ -40,86 +39,57 @@ export async function loadConfig(): Promise<HudConfig> {
   }
 }
 
+type RecursivePartial<T> = {
+  [P in keyof T]?: T[P] extends object ? RecursivePartial<T[P]> : T[P];
+};
+
 /**
- * Merge user configuration with defaults, validating each field.
+ * Deep merge user configuration with defaults, validating each field.
  */
-export function mergeConfig(userConfig: Record<string, unknown>): HudConfig {
-  const config: HudConfig = {
-    lineLayout: validateLineLayout(userConfig.lineLayout as string) ?? DEFAULT_CONFIG.lineLayout,
-    pathLevels: validatePathLevels(userConfig.pathLevels as number) ?? DEFAULT_CONFIG.pathLevels,
-    maxWidth: validateMaxWidth(userConfig.maxWidth as number | null) ?? DEFAULT_CONFIG.maxWidth,
+export function mergeConfig(userConfig: RecursivePartial<HudConfig>): HudConfig {
+  const d = DEFAULT_CONFIG;
+
+  return {
+    lineLayout: validateLineLayout(userConfig.lineLayout) ?? d.lineLayout,
+    pathLevels: validatePathLevels(userConfig.pathLevels) ?? d.pathLevels,
+    maxWidth: validateMaxWidth(userConfig.maxWidth) ?? d.maxWidth,
 
     gitStatus: {
-      enabled: typeof userConfig.gitStatus === 'object' && userConfig.gitStatus !== null
-        ? (userConfig.gitStatus as Record<string, unknown>).enabled as boolean ?? DEFAULT_CONFIG.gitStatus.enabled
-        : DEFAULT_CONFIG.gitStatus.enabled,
-      showDirty: typeof userConfig.gitStatus === 'object' && userConfig.gitStatus !== null
-        ? (userConfig.gitStatus as Record<string, unknown>).showDirty as boolean ?? DEFAULT_CONFIG.gitStatus.showDirty
-        : DEFAULT_CONFIG.gitStatus.showDirty,
-      showAheadBehind: typeof userConfig.gitStatus === 'object' && userConfig.gitStatus !== null
-        ? (userConfig.gitStatus as Record<string, unknown>).showAheadBehind as boolean ?? DEFAULT_CONFIG.gitStatus.showAheadBehind
-        : DEFAULT_CONFIG.gitStatus.showAheadBehind,
-      showFileStats: typeof userConfig.gitStatus === 'object' && userConfig.gitStatus !== null
-        ? (userConfig.gitStatus as Record<string, unknown>).showFileStats as boolean ?? DEFAULT_CONFIG.gitStatus.showFileStats
-        : DEFAULT_CONFIG.gitStatus.showFileStats,
+      enabled: userConfig.gitStatus?.enabled ?? d.gitStatus.enabled,
+      showDirty: userConfig.gitStatus?.showDirty ?? d.gitStatus.showDirty,
+      showAheadBehind: userConfig.gitStatus?.showAheadBehind ?? d.gitStatus.showAheadBehind,
+      showFileStats: userConfig.gitStatus?.showFileStats ?? d.gitStatus.showFileStats,
     },
 
     display: {
-      showModel: typeof userConfig.display === 'object' && userConfig.display !== null
-        ? (userConfig.display as Record<string, unknown>).showModel as boolean ?? DEFAULT_CONFIG.display.showModel
-        : DEFAULT_CONFIG.display.showModel,
-      showProject: typeof userConfig.display === 'object' && userConfig.display !== null
-        ? (userConfig.display as Record<string, unknown>).showProject as boolean ?? DEFAULT_CONFIG.display.showProject
-        : DEFAULT_CONFIG.display.showProject,
-      showContextBar: typeof userConfig.display === 'object' && userConfig.display !== null
-        ? (userConfig.display as Record<string, unknown>).showContextBar as boolean ?? DEFAULT_CONFIG.display.showContextBar
-        : DEFAULT_CONFIG.display.showContextBar,
-      showDuration: typeof userConfig.display === 'object' && userConfig.display !== null
-        ? (userConfig.display as Record<string, unknown>).showDuration as boolean ?? DEFAULT_CONFIG.display.showDuration
-        : DEFAULT_CONFIG.display.showDuration,
-      showCost: typeof userConfig.display === 'object' && userConfig.display !== null
-        ? (userConfig.display as Record<string, unknown>).showCost as boolean ?? DEFAULT_CONFIG.display.showCost
-        : DEFAULT_CONFIG.display.showCost,
-      showCodeStats: typeof userConfig.display === 'object' && userConfig.display !== null
-        ? (userConfig.display as Record<string, unknown>).showCodeStats as boolean ?? DEFAULT_CONFIG.display.showCodeStats
-        : DEFAULT_CONFIG.display.showCodeStats,
-      showVersion: typeof userConfig.display === 'object' && userConfig.display !== null
-        ? (userConfig.display as Record<string, unknown>).showVersion as boolean ?? DEFAULT_CONFIG.display.showVersion
-        : DEFAULT_CONFIG.display.showVersion,
-      showSessionId: typeof userConfig.display === 'object' && userConfig.display !== null
-        ? (userConfig.display as Record<string, unknown>).showSessionId as boolean ?? DEFAULT_CONFIG.display.showSessionId
-        : DEFAULT_CONFIG.display.showSessionId,
-      sessionIdLength: typeof userConfig.display === 'object' && userConfig.display !== null
-        ? ((userConfig.display as Record<string, unknown>).sessionIdLength as number) ?? DEFAULT_CONFIG.display.sessionIdLength
-        : DEFAULT_CONFIG.display.sessionIdLength,
+      showModel: userConfig.display?.showModel ?? d.display.showModel,
+      showProject: userConfig.display?.showProject ?? d.display.showProject,
+      showContextBar: userConfig.display?.showContextBar ?? d.display.showContextBar,
+      showDuration: userConfig.display?.showDuration ?? d.display.showDuration,
+      showCost: userConfig.display?.showCost ?? d.display.showCost,
+      showCodeStats: userConfig.display?.showCodeStats ?? d.display.showCodeStats,
+      showVersion: userConfig.display?.showVersion ?? d.display.showVersion,
+      showSessionId: userConfig.display?.showSessionId ?? d.display.showSessionId,
+      sessionIdLength: userConfig.display?.sessionIdLength ?? d.display.sessionIdLength,
+      showToolsLine: userConfig.display?.showToolsLine ?? d.display.showToolsLine,
+      showAgentsLine: userConfig.display?.showAgentsLine ?? d.display.showAgentsLine,
+      showTodosLine: userConfig.display?.showTodosLine ?? d.display.showTodosLine,
     },
 
     colors: {
-      model: typeof userConfig.colors === 'object' && userConfig.colors !== null
-        ? ((userConfig.colors as Record<string, unknown>).model as string) ?? DEFAULT_CONFIG.colors.model
-        : DEFAULT_CONFIG.colors.model,
-      project: typeof userConfig.colors === 'object' && userConfig.colors !== null
-        ? ((userConfig.colors as Record<string, unknown>).project as string) ?? DEFAULT_CONFIG.colors.project
-        : DEFAULT_CONFIG.colors.project,
-      git: typeof userConfig.colors === 'object' && userConfig.colors !== null
-        ? ((userConfig.colors as Record<string, unknown>).git as string) ?? DEFAULT_CONFIG.colors.git
-        : DEFAULT_CONFIG.colors.git,
-      gitBranch: typeof userConfig.colors === 'object' && userConfig.colors !== null
-        ? ((userConfig.colors as Record<string, unknown>).gitBranch as string) ?? DEFAULT_CONFIG.colors.gitBranch
-        : DEFAULT_CONFIG.colors.gitBranch,
-      duration: typeof userConfig.colors === 'object' && userConfig.colors !== null
-        ? ((userConfig.colors as Record<string, unknown>).duration as string) ?? DEFAULT_CONFIG.colors.duration
-        : DEFAULT_CONFIG.colors.duration,
-      cost: typeof userConfig.colors === 'object' && userConfig.colors !== null
-        ? ((userConfig.colors as Record<string, unknown>).cost as string) ?? DEFAULT_CONFIG.colors.cost
-        : DEFAULT_CONFIG.colors.cost,
-      label: typeof userConfig.colors === 'object' && userConfig.colors !== null
-        ? ((userConfig.colors as Record<string, unknown>).label as string) ?? DEFAULT_CONFIG.colors.label
-        : DEFAULT_CONFIG.colors.label,
+      model: userConfig.colors?.model ?? d.colors.model,
+      project: userConfig.colors?.project ?? d.colors.project,
+      git: userConfig.colors?.git ?? d.colors.git,
+      gitBranch: userConfig.colors?.gitBranch ?? d.colors.gitBranch,
+      duration: userConfig.colors?.duration ?? d.colors.duration,
+      cost: userConfig.colors?.cost ?? d.colors.cost,
+      label: userConfig.colors?.label ?? d.colors.label,
+      toolActive: userConfig.colors?.toolActive ?? d.colors.toolActive,
+      toolCompleted: userConfig.colors?.toolCompleted ?? d.colors.toolCompleted,
+      agentActive: userConfig.colors?.agentActive ?? d.colors.agentActive,
+      taskProgress: userConfig.colors?.taskProgress ?? d.colors.taskProgress,
     },
   };
-
-  return config;
 }
 
 // ─── Validation helpers ─────────────────────────────────────────────

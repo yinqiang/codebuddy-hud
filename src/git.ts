@@ -3,17 +3,33 @@
  *
  * Retrieves Git repository status: branch, dirty state,
  * ahead/behind counts, file stats, and line diffs.
+ * Results are cached for 2 seconds to avoid redundant exec calls.
  */
 
 import { execFile } from 'node:child_process';
 import { promisify } from 'node:util';
-import type { GitStatus, FileStats, LineDiff, TrackedFile } from './types.js';
+import type { GitStatus, FileStats, LineDiff } from './types.js';
+import { gitCache } from './cache.js';
 
 const execFileAsync = promisify(execFile);
 
 export async function getGitStatus(cwd?: string): Promise<GitStatus | null> {
   if (!cwd) return null;
 
+  // Check cache
+  const cacheKey = `git:${cwd}`;
+  const cached = gitCache.get(cacheKey) as GitStatus | undefined;
+  if (cached !== undefined) return cached;
+
+  const result = await computeGitStatus(cwd);
+
+  // Cache the result (even null, to avoid repeated failed lookups)
+  gitCache.set(cacheKey, result);
+
+  return result;
+}
+
+async function computeGitStatus(cwd: string): Promise<GitStatus | null> {
   try {
     // 1. Get branch name
     const { stdout: branchOut } = await execFileAsync(
@@ -52,8 +68,7 @@ export async function getGitStatus(cwd?: string): Promise<GitStatus | null> {
           ['diff', '--numstat', 'HEAD'],
           { cwd, timeout: 2000, encoding: 'utf8' },
         );
-        const trackedPaths = new Set(fileStats?.trackedFiles.map(f => f.fullPath) ?? []);
-        lineDiff = parseNumstat(numstatOut, trackedPaths, fileStats);
+        lineDiff = parseNumstat(numstatOut, fileStats);
       } catch {
         // Ignore
       }
@@ -146,7 +161,6 @@ function parsePorcelainPath(pathField: string): string {
  */
 function parseNumstat(
   numstatOutput: string,
-  trackedPaths: Set<string>,
   fileStats?: FileStats,
 ): LineDiff {
   const totalDiff: LineDiff = { added: 0, deleted: 0 };

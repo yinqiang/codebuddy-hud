@@ -1,0 +1,7 @@
+{
+  "statusLine": {
+    "type": "command",
+    "command": "node Q:/projects/codebuddy-hud/dist/index.js",
+    "padding": 0
+  }
+}

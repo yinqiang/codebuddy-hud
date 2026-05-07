@@ -4,8 +4,6 @@
  * Terminal width detection for responsive layout.
  */
 
-import * as fs from 'node:fs';
-
 export const UNKNOWN_TERMINAL_WIDTH = -1;
 
 /**

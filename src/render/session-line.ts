@@ -10,7 +10,6 @@ import {
   getModelName,
   getProjectName,
   getCostUsd,
-  getDuration,
   getLinesAdded,
   getLinesRemoved,
   getSessionId,
@@ -24,8 +23,6 @@ import {
   cost as costColor,
   label,
   dim,
-  RESET,
-  coloredBar,
 } from './colors.js';
 
 /**
