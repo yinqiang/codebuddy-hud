@@ -10,17 +10,22 @@ You are helping the user set up the CodeBuddy HUD statusline for their CodeBuddy
 
 ## Steps
 
-1. **Check Node.js**: Verify Node.js 18+ is installed by running `node --version`.
+1. **Check prerequisites**: Verify Node.js 18+ is installed by running `node --version`. If not available, guide the user to install it.
 
-2. **Determine configuration** (from argument or ask user):
+2. **Detect environment**: Auto-detect settings where possible:
+   - **language**: Check if the user communicates in Chinese → suggest `zh`, otherwise `en`
+   - **project type**: Check if current directory is a git repo (`git rev-parse --git-dir`)
+   - **terminal width**: Not detectable during setup, recommend `adaptiveLayout: true`
+
+3. **Determine configuration** (from argument or ask user):
    - **preset**: `full` | `essential` | `minimal` (default: `essential`)
    - **theme**: `default` | `dracula` | `solarized` | `monokai` | `nord` (default: `default`)
-   - **language**: `en` | `zh` (default: `en`)
-   - **layout**: `compact` | `expanded` (default: `compact`)
+   - **language**: `en` | `zh` (default: based on user's language)
+   - **layout**: `compact` | `expanded` (default: `compact`, recommend `adaptiveLayout: true`)
 
-3. **Build the HUD**: Run `cd ${CODEBUDDY_PLUGIN_ROOT} && npm ci && npm run build`
+4. **Build the HUD**: Run `cd ${CODEBUDDY_PLUGIN_ROOT} && npm ci && npm run build`
 
-4. **Configure statusline**: Update `.codebuddy/settings.json` (project-level) or `~/.codebuddy/settings.json` (user-level) with:
+5. **Configure statusline**: Update `.codebuddy/settings.json` (project-level) or `~/.codebuddy/settings.json` (user-level) with:
 
 ```json
 {
@@ -32,9 +37,11 @@ You are helping the user set up the CodeBuddy HUD statusline for their CodeBuddy
 }
 ```
 
-Replace `${CODEBUDDY_PLUGIN_ROOT}` with the actual plugin directory path.
+Replace `${CODEBUDDY_PLUGIN_ROOT}` with the actual absolute path to the plugin directory. On Windows, use forward slashes (e.g., `Q:/projects/codebuddy-hud/dist/index.js`).
 
-5. **Create config**: Create `${CODEBUDDY_PLUGIN_ROOT}/config.json` based on the user's choices. The config supports:
+**Important**: If updating user-level settings (`~/.codebuddy/settings.json`), merge the `statusLine` key into the existing JSON — do NOT overwrite other settings like `model`, `sandbox`, `enabledPlugins`, etc.
+
+6. **Create config**: Create `${CODEBUDDY_PLUGIN_ROOT}/config.json` based on the user's choices.
 
 ### Minimal config (preset-only)
 
@@ -85,6 +92,14 @@ Any field in the config overrides the preset value:
 }
 ```
 
+7. **Verify**: Run a quick smoke test:
+   ```bash
+   echo '{"model":{"id":"test","display_name":"Test"},"workspace":{"current_dir":"'$(pwd)'","project_dir":"'$(pwd)'"},"cost":{"total_cost_usd":0.01,"total_duration_ms":60000,"total_api_duration_ms":5000,"total_lines_added":10,"total_lines_removed":2},"session_id":"setup-test","version":"2.9.0"}' | node ${CODEBUDDY_PLUGIN_ROOT}/dist/index.js
+   ```
+   The output should show a colored statusline with `[Test] │ project-name │ ...`
+
+8. **Tell user**: The HUD is set up and will appear in the statusline on the next update cycle (~300ms). To debug performance, set `CODEBUDDY_HUD_PROFILE=1` and check stderr output.
+
 ### Preset descriptions
 
 | Preset | Model | Project | Git | Duration | Cost | Code Stats | Tools | Agents | Todos |
@@ -110,4 +125,12 @@ Any field in the config overrides the preset value:
 | **en** | git | 10m | Read, Write, Bash... |
 | **zh** | 仓库 | 10分 | 读, 写, 执行... |
 
-6. **Verify**: Tell the user the HUD is set up and will appear in the statusline on the next update cycle (~300ms).
+### Troubleshooting
+
+| Issue | Solution |
+|-------|----------|
+| Statusline not showing | Check `node` is in PATH, verify `settings.json` has correct path to `dist/index.js` |
+| Chinese/emoji garbled | Ensure terminal supports UTF-8 encoding |
+| Slow on large repos | Use `essential` or `minimal` preset; set `adaptiveLayout: true` |
+| Profile performance | Set env var `CODEBUDDY_HUD_PROFILE=1` and check stderr |
+| Git info missing | Verify the project is a git repo and `git` is in PATH |
