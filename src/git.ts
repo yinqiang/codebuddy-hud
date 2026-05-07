@@ -3,7 +3,8 @@
  *
  * Retrieves Git repository status: branch, dirty state,
  * ahead/behind counts, file stats, and line diffs.
- * Results are cached for 2 seconds to avoid redundant exec calls.
+ * Results are cached for 3 seconds to avoid redundant exec calls.
+ * Git commands run in parallel for performance.
  */
 
 import { execFile } from 'node:child_process';
@@ -13,7 +14,16 @@ import { gitCache } from './cache.js';
 
 const execFileAsync = promisify(execFile);
 
-export async function getGitStatus(cwd?: string): Promise<GitStatus | null> {
+/** Per-command timeout for git operations (ms) */
+const GIT_TIMEOUT = 800;
+
+export interface GitOptions {
+  showDirty?: boolean;
+  showAheadBehind?: boolean;
+  showFileStats?: boolean;
+}
+
+export async function getGitStatus(cwd?: string, options?: GitOptions): Promise<GitStatus | null> {
   if (!cwd) return null;
 
   // Check cache
@@ -21,7 +31,7 @@ export async function getGitStatus(cwd?: string): Promise<GitStatus | null> {
   const cached = gitCache.get(cacheKey) as GitStatus | undefined;
   if (cached !== undefined) return cached;
 
-  const result = await computeGitStatus(cwd);
+  const result = await computeGitStatus(cwd, options);
 
   // Cache the result (even null, to avoid repeated failed lookups)
   gitCache.set(cacheKey, result);
@@ -29,70 +39,75 @@ export async function getGitStatus(cwd?: string): Promise<GitStatus | null> {
   return result;
 }
 
-async function computeGitStatus(cwd: string): Promise<GitStatus | null> {
+async function computeGitStatus(cwd: string, options?: GitOptions): Promise<GitStatus | null> {
+  const showDirty = options?.showDirty ?? true;
+  const showAheadBehind = options?.showAheadBehind ?? false;
+  const showFileStats = options?.showFileStats ?? false;
+
   try {
-    // 1. Get branch name
-    const { stdout: branchOut } = await execFileAsync(
-      'git',
-      ['rev-parse', '--abbrev-ref', 'HEAD'],
-      { cwd, timeout: 1000, encoding: 'utf8' },
-    );
-    const branch = branchOut.trim();
+    // Run ALL git commands in parallel for maximum performance
+    const results = await Promise.all([
+      // Branch name
+      execFileAsync('git', ['rev-parse', '--abbrev-ref', 'HEAD'], {
+        cwd, timeout: GIT_TIMEOUT, encoding: 'utf8',
+      }).then(({ stdout }) => stdout.trim()).catch(() => null),
+
+      // Dirty check (fast or full depending on config)
+      showDirty
+        ? (showFileStats
+            ? execFileAsync('git', ['--no-optional-locks', 'status', '--porcelain'], {
+                cwd, timeout: GIT_TIMEOUT, encoding: 'utf8',
+              }).then(({ stdout }) => {
+                const trimmed = stdout.trim();
+                return { isDirty: trimmed.length > 0, fileStats: trimmed.length > 0 ? parseFileStats(trimmed) : undefined };
+              }).catch(() => ({ isDirty: false }))
+            : execFileAsync('git', ['diff', '--quiet', 'HEAD'], {
+                cwd, timeout: GIT_TIMEOUT, encoding: 'utf8',
+              }).then(() => ({ isDirty: false }))
+              .catch((err) => {
+                const code = err?.code ?? err?.status ?? 1;
+                return { isDirty: code === 1 };
+              })
+        )
+        : Promise.resolve(undefined),
+
+      // Ahead/behind
+      showAheadBehind
+        ? execFileAsync('git', ['rev-list', '--left-right', '--count', '@{upstream}...HEAD'], {
+            cwd, timeout: GIT_TIMEOUT, encoding: 'utf8',
+          }).then(({ stdout }) => {
+            const parts = stdout.trim().split(/\s+/);
+            return { ahead: parts.length === 2 ? (parseInt(parts[1], 10) || 0) : 0, behind: parts.length === 2 ? (parseInt(parts[0], 10) || 0) : 0 };
+          }).catch(() => ({ ahead: 0, behind: 0 }))
+        : Promise.resolve(undefined),
+    ]);
+
+    const [branch, dirtyResult, aheadBehindResult] = results;
+
     if (!branch) return null;
 
-    // 2. Check dirty state and file stats
-    let isDirty = false;
-    let fileStats: FileStats | undefined;
-
-    try {
-      const { stdout: statusOut } = await execFileAsync(
-        'git',
-        ['--no-optional-locks', 'status', '--porcelain'],
-        { cwd, timeout: 1000, encoding: 'utf8' },
-      );
-      const trimmed = statusOut.trim();
-      isDirty = trimmed.length > 0;
-      if (isDirty) {
-        fileStats = parseFileStats(trimmed);
-      }
-    } catch {
-      // Assume clean on error
-    }
-
-    // 3. Get line diffs
+    // Line diffs (depends on dirty, sequential but only for full preset)
     let lineDiff: LineDiff | undefined;
-    if (isDirty) {
+    if (showFileStats && dirtyResult && 'fileStats' in dirtyResult && dirtyResult.isDirty) {
       try {
         const { stdout: numstatOut } = await execFileAsync(
-          'git',
-          ['diff', '--numstat', 'HEAD'],
-          { cwd, timeout: 2000, encoding: 'utf8' },
+          'git', ['diff', '--numstat', 'HEAD'],
+          { cwd, timeout: GIT_TIMEOUT, encoding: 'utf8' },
         );
-        lineDiff = parseNumstat(numstatOut, fileStats);
+        lineDiff = parseNumstat(numstatOut, dirtyResult.fileStats);
       } catch {
         // Ignore
       }
     }
 
-    // 4. Get ahead/behind counts
-    let ahead = 0;
-    let behind = 0;
-    try {
-      const { stdout: revOut } = await execFileAsync(
-        'git',
-        ['rev-list', '--left-right', '--count', '@{upstream}...HEAD'],
-        { cwd, timeout: 1000, encoding: 'utf8' },
-      );
-      const parts = revOut.trim().split(/\s+/);
-      if (parts.length === 2) {
-        behind = parseInt(parts[0], 10) || 0;
-        ahead = parseInt(parts[1], 10) || 0;
-      }
-    } catch {
-      // No upstream or error
-    }
-
-    return { branch, isDirty, ahead, behind, fileStats, lineDiff };
+    return {
+      branch,
+      isDirty: dirtyResult && 'isDirty' in dirtyResult ? dirtyResult.isDirty : false,
+      ahead: aheadBehindResult ? aheadBehindResult.ahead : 0,
+      behind: aheadBehindResult ? aheadBehindResult.behind : 0,
+      fileStats: dirtyResult && 'fileStats' in dirtyResult ? dirtyResult.fileStats : undefined,
+      lineDiff,
+    };
   } catch {
     return null;
   }

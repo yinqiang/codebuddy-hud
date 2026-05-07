@@ -86,11 +86,11 @@ export async function parseTranscript(filePath: string): Promise<TranscriptSumma
 
 /**
  * Quick incremental parse: only read the last N lines for active state.
- * Falls back to full parse for small files.
+ * Uses byte-level tail reading for large files to avoid reading the entire file.
  */
 export async function parseTranscriptIncremental(
   filePath: string,
-  tailLines: number = 100,
+  tailLines: number = 200,
 ): Promise<TranscriptSummary | null> {
   if (!filePath) return null;
 
@@ -98,17 +98,35 @@ export async function parseTranscriptIncremental(
     const stat = fs.statSync(filePath);
     if (!stat.isFile()) return null;
 
-    // For small files (< 64KB), just do full parse
-    if (stat.size < 64 * 1024) {
+    // Check cache first (same as full parse)
+    const cached = transcriptCache.get(filePath);
+    if (cached && cached.fileSize === stat.size && cached.lastModifiedMs === stat.mtimeMs) {
+      return cached.summary;
+    }
+
+    // For small files (< 256KB), just do full parse
+    if (stat.size < 256 * 1024) {
       return parseTranscript(filePath);
     }
 
-    // Read tail of file for active state
-    const tailContent = await readTail(filePath, tailLines);
+    // For large files, read only the tail portion
+    const tailContent = await readTailBytes(filePath, tailLines, stat.size);
     if (!tailContent) return parseTranscript(filePath);
 
-    // For incremental, we only get active tool + recent task state
-    return parseTranscriptContent(tailContent);
+    const summary = parseTranscriptContent(tailContent);
+
+    // Cache the result
+    if (summary) {
+      transcriptCache.set(filePath, {
+        summary,
+        fileSize: stat.size,
+        lastModifiedMs: stat.mtimeMs,
+        lineCount: 0,
+      });
+      evictCache();
+    }
+
+    return summary;
   } catch {
     return null;
   }
@@ -385,9 +403,59 @@ function isValidTaskStatus(status: string): status is TaskState['status'] {
 
 // ─── Tail reading ───────────────────────────────────────────────────
 
+/**
+ * Efficient byte-level tail reading for large files.
+ * Seeks to near the end of the file and reads backwards to find line boundaries.
+ * Much faster than reading the entire file for large transcripts.
+ */
+async function readTailBytes(
+  filePath: string,
+  targetLines: number,
+  fileSize: number,
+): Promise<string | null> {
+  // Estimate bytes needed: ~2KB per JSONL line is generous
+  const avgLineBytes = 2048;
+  const readSize = Math.min(targetLines * avgLineBytes, fileSize);
+
+  return new Promise((resolve) => {
+    const fd = fs.openSync(filePath, 'r');
+
+    try {
+      // Read from the end of the file
+      const startPos = Math.max(0, fileSize - readSize);
+      const buf = Buffer.alloc(fileSize - startPos);
+      const bytesRead = fs.readSync(fd, buf, 0, buf.length, startPos);
+
+      if (bytesRead === 0) {
+        fs.closeSync(fd);
+        resolve(null);
+        return;
+      }
+
+      const content = buf.toString('utf8', 0, bytesRead);
+
+      // If we started mid-file, skip the first partial line
+      const firstNewline = startPos > 0 ? content.indexOf('\n') : -1;
+      const trimmed = firstNewline >= 0 ? content.slice(firstNewline + 1) : content;
+
+      // Take only the last targetLines lines
+      const lines = trimmed.split('\n');
+      const tail = lines.slice(-targetLines).join('\n');
+
+      fs.closeSync(fd);
+      resolve(tail || null);
+    } catch {
+      try { fs.closeSync(fd); } catch { /* ignore */ }
+      resolve(null);
+    }
+  });
+}
+
+/**
+ * Legacy line-by-line tail reader (slower, used as fallback).
+ */
 async function readTail(filePath: string, lineCount: number): Promise<string | null> {
   return new Promise((resolve) => {
-    let output = '';
     const rl = readline.createInterface({
       input: fs.createReadStream(filePath, { encoding: 'utf8' }),
       crlfDelay: Infinity,
@@ -398,15 +466,13 @@ async function readTail(filePath: string, lineCount: number): Promise<string | n
     rl.on('line', (line) => {
       lines.push(line);
       if (lines.length > lineCount * 2) {
-        // Keep a sliding window
         lines.splice(0, lines.length - lineCount);
       }
     });
 
     rl.on('close', () => {
       const tail = lines.slice(-lineCount);
-      output = tail.join('\n');
-      resolve(output || null);
+      resolve(tail.join('\n') || null);
     });
 
     rl.on('error', () => {

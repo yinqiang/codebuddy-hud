@@ -56,9 +56,9 @@ export function renderTodosLine(ctx: RenderContext): string | null {
     }
   }
 
-  // Expanded layout: prefix with "Tasks:"
+  // Expanded layout: prefix with localized label
   if (config.lineLayout === 'expanded') {
-    return dim('Tasks: ') + parts.join(' │ ');
+    return dim(`${s.tasksLabel}: `) + parts.join(' │ ');
   }
 
   return parts.join(' │ ');

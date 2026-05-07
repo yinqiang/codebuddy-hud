@@ -29,9 +29,9 @@ const TOOL_SHORT_NAMES: Record<string, Record<string, string>> = {
   zh: {
     WebFetch: '抓取',
     WebSearch: '搜索',
-    TaskCreate: '建任务',
-    TaskUpdate: '更任务',
-    TaskList: '任务列表',
+    TaskCreate: '新建',
+    TaskUpdate: '更新',
+    TaskList: '任务',
     ImageGen: '生图',
     ImageEdit: '改图',
     EnterPlanMode: '规划→',
@@ -89,9 +89,9 @@ export function renderToolsLine(ctx: RenderContext): string | null {
 
   if (parts.length === 0) return null;
 
-  // Expanded layout: prefix with "Tools:"
+  // Expanded layout: prefix with localized label
   if (config.lineLayout === 'expanded') {
-    return dim('Tools: ') + parts.join(' │ ');
+    return dim(`${s.toolsLabel}: `) + parts.join(' │ ');
   }
 
   return parts.join(' │ ');

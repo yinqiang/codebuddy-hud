@@ -32,15 +32,18 @@ interface I18nStrings {
   toolCompleted: string;
   toolMore: string;
   toolDone: string;
+  toolsLabel: string;
 
   // Agent status
   agentActive: string;
   agentDone: string;
   agentMore: string;
+  agentsLabel: string;
 
   // Task progress
   taskProgress: string;
   taskMore: string;
+  tasksLabel: string;
 
   // Duration format
   lessThanMinute: string;
@@ -74,13 +77,16 @@ const EN: I18nStrings = {
   toolCompleted: '✓',
   toolMore: '+{n} more',
   toolDone: '',
+  toolsLabel: 'Tools',
 
   agentActive: '▸',
   agentDone: '✓ {n} agent{s} done',
   agentMore: '+{n} more',
+  agentsLabel: 'Agents',
 
   taskProgress: '',
   taskMore: '+{n} more',
+  tasksLabel: 'Tasks',
 
   lessThanMinute: '<1m',
   minute: 'm',
@@ -112,13 +118,16 @@ const ZH: I18nStrings = {
   toolCompleted: '✓',
   toolMore: '+{n}更多',
   toolDone: '',
+  toolsLabel: '工具',
 
   agentActive: '▸',
   agentDone: '✓ {n}个代理完成',
   agentMore: '+{n}更多',
+  agentsLabel: '代理',
 
   taskProgress: '',
   taskMore: '+{n}更多',
+  tasksLabel: '任务',
 
   lessThanMinute: '<1分',
   minute: '分',

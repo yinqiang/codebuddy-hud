@@ -56,7 +56,7 @@ export class TtlCache<T> {
 
 // ─── Singleton caches ───────────────────────────────────────────────
 
-/** Git status cache (2s TTL) */
-export const gitCache = new TtlCache<unknown>(2000);
+/** Git status cache (3s TTL — statusline refreshes every 300ms, so ~10 calls from cache) */
+export const gitCache = new TtlCache<unknown>(3000);
 
 /** Transcript summary cache is managed internally in transcript.ts */

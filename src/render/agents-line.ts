@@ -46,9 +46,9 @@ export function renderAgentsLine(ctx: RenderContext): string | null {
 
   if (parts.length === 0) return null;
 
-  // Expanded layout: prefix with "Agents:"
+  // Expanded layout: prefix with localized label
   if (config.lineLayout === 'expanded') {
-    return dim('Agents: ') + parts.join(' │ ');
+    return dim(`${s.agentsLabel}: `) + parts.join(' │ ');
   }
 
   return parts.join(' │ ');
