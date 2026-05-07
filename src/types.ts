@@ -165,6 +165,8 @@ export interface HudConfig {
   lineLayout: LineLayoutType;
   pathLevels: number;
   maxWidth: number | null;
+  language: 'en' | 'zh';
+  adaptiveLayout: boolean;
 
   gitStatus: {
     enabled: boolean;
@@ -207,6 +209,8 @@ export const DEFAULT_CONFIG: HudConfig = {
   lineLayout: 'compact',
   pathLevels: 1,
   maxWidth: null,
+  language: 'en',
+  adaptiveLayout: true,
 
   gitStatus: {
     enabled: true,

@@ -3,13 +3,13 @@
  *
  * Renders a line showing task completion progress.
  *
- * Example:
- *   ▸ Fix auth bug (3/7)
- *   ▸ Implement API │ Implement UI (2/5)
+ * Compact:  ▸ Fix auth bug (3/7)
+ * Expanded: Tasks: ███████░ 3/7 │ ▸ Fix auth bug
  */
 
 import type { RenderContext } from '../types.js';
 import { colorize, dim, coloredBar } from './colors.js';
+import { getStrings, t } from '../i18n.js';
 
 /**
  * Render the task progress line.
@@ -25,6 +25,7 @@ export function renderTodosLine(ctx: RenderContext): string | null {
   if (taskProgress.total === 0) return null;
 
   const colors = config.colors;
+  const s = getStrings(config.language);
   const parts: string[] = [];
 
   // Progress indicator: completed / total
@@ -51,8 +52,13 @@ export function renderTodosLine(ctx: RenderContext): string | null {
       parts.push(colorize(`▸ ${subject}`, colors.taskProgress));
     }
     if (taskProgress.inProgress > 2) {
-      parts.push(dim(`+${taskProgress.inProgress - 2} more`));
+      parts.push(dim(t(s.taskMore, { n: taskProgress.inProgress - 2 })));
     }
+  }
+
+  // Expanded layout: prefix with "Tasks:"
+  if (config.lineLayout === 'expanded') {
+    return dim('Tasks: ') + parts.join(' │ ');
   }
 
   return parts.join(' │ ');

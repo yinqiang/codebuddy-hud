@@ -11,6 +11,7 @@ import { loadConfig } from './config.js';
 import { parseTranscript } from './transcript.js';
 import { render } from './render/index.js';
 import { formatDuration } from './render/session-line.js';
+import { getStrings, t } from './i18n.js';
 import type { RenderContext, TranscriptSummary } from './types.js';
 
 export async function main(): Promise<void> {
@@ -24,8 +25,9 @@ export async function main(): Promise<void> {
       return;
     }
 
-    // 2. Load configuration
+    // 2. Load configuration (with preset/theme/language support)
     const config = await loadConfig();
+    const s = getStrings(config.language);
 
     // 3. Get Git status (cached)
     const cwd = stdin.workspace?.current_dir ?? stdin.cwd ?? '';
@@ -40,9 +42,9 @@ export async function main(): Promise<void> {
       transcript = await parseTranscript(transcriptPath);
     }
 
-    // 5. Calculate session duration
+    // 5. Calculate session duration (i18n-aware)
     const durationMs = getDuration(stdin);
-    const sessionDuration = formatDuration(durationMs);
+    const sessionDuration = formatDuration(durationMs, config.language);
 
     // 6. Assemble render context
     const ctx: RenderContext = {
@@ -57,7 +59,7 @@ export async function main(): Promise<void> {
     render(ctx);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Unknown error';
-    console.log(`[codebuddy-hud] Error: ${message}`);
+    console.log(t(getStrings('en').error, { msg: message }));
   }
 }
 

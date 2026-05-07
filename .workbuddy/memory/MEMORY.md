@@ -19,19 +19,33 @@
 src/
 ├── index.ts              # 主入口
 ├── stdin.ts              # stdin JSON 读取 (250ms首字节超时)
-├── git.ts                # Git 状态 (分支/脏状态/ahead-behind)
-├── config.ts             # 配置加载/验证
-├── types.ts              # TypeScript 类型
+├── transcript.ts         # Transcript JSONL 解析 (Phase 2)
+├── git.ts                # Git 状态 (分支/脏状态/ahead-behind) + 缓存
+├── config.ts             # 配置加载/验证 (RecursivePartial merge)
+├── cache.ts              # 通用 TTL 缓存 (Phase 2)
+├── types.ts              # TypeScript 类型 + TranscriptSummary 等
 ├── render/
-│   ├── index.ts          # 渲染入口
+│   ├── index.ts          # 渲染入口 (多行输出)
 │   ├── session-line.ts   # 会话信息行
+│   ├── tools-line.ts     # 工具活动行 (Phase 2)
+│   ├── agents-line.ts    # 代理状态行 (Phase 2)
+│   ├── todos-line.ts     # 待办进度行 (Phase 2)
 │   ├── colors.ts         # ANSI 颜色
 │   └── width.ts          # CJK/emoji 宽度
 └── utils/
     └── terminal.ts       # 终端宽度检测
 ```
 
-## Phase 2 待确认
-- CodeBuddy transcript.json 格式（需获取实际文件）
-- stdin JSON 是否有额外未文档化的字段
-- 是否可能获取上下文窗口 token 数据
+## Transcript 格式 (CodeBuddy)
+- JSONL 格式，每行一个 JSON 对象
+- 5 种条目类型：message, function_call, function_call_result, file-history-snapshot, reasoning
+- function_call 关键字段：name(工具名), callId, arguments(JSON string)
+- function_call_result 关键字段：name, callId, status("completed"), output({type, text})
+- Agent 调用：name="Agent"，arguments 含 description/prompt
+- TaskCreate/TaskUpdate：arguments 含 subject/description/status/taskId
+- message：role(user/assistant), status("completed"), content(array)
+
+## 当前阶段
+- Phase 1 MVP ✅
+- Phase 2 高级功能 ✅ (transcript 解析 + 多行 HUD + 缓存)
+- Phase 3 增强功能 (待实现)：配置系统完善、多布局模式、自适应、国际化

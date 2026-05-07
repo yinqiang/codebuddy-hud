@@ -3,6 +3,7 @@
  *
  * Renders the main statusline with model, project, git,
  * duration, cost, and code stats.
+ * Supports compact (single-line) and expanded (multi-line) layouts.
  */
 
 import type { RenderContext } from '../types.js';
@@ -23,23 +24,26 @@ import {
   cost as costColor,
   label,
   dim,
+  bold,
 } from './colors.js';
+import { getStrings, t } from '../i18n.js';
 
 /**
  * Format milliseconds to human-readable duration string.
  */
-export function formatDuration(ms: number): string {
+export function formatDuration(ms: number, lang: 'en' | 'zh' = 'en'): string {
   if (ms <= 0) return '';
 
+  const s = getStrings(lang);
   const totalSec = Math.floor(ms / 1000);
   const mins = Math.floor(totalSec / 60);
 
-  if (mins < 1) return '<1m';
-  if (mins < 60) return `${mins}m`;
+  if (mins < 1) return s.lessThanMinute;
+  if (mins < 60) return `${mins}${s.minute}`;
 
   const hours = Math.floor(mins / 60);
   const remainMins = mins % 60;
-  return remainMins > 0 ? `${hours}h ${remainMins}m` : `${hours}h`;
+  return remainMins > 0 ? `${hours}${s.hour} ${remainMins}${s.minute}` : `${hours}${s.hour}`;
 }
 
 /**
@@ -63,9 +67,21 @@ function formatLines(n: number): string {
  * Render the main session line for compact layout.
  */
 export function renderSessionLine(ctx: RenderContext): string {
+  const { config } = ctx;
+  if (config.lineLayout === 'expanded') {
+    return renderExpandedSessionLine(ctx);
+  }
+  return renderCompactSessionLine(ctx);
+}
+
+/**
+ * Compact layout: single line, pipe-separated.
+ */
+function renderCompactSessionLine(ctx: RenderContext): string {
   const { stdin, gitStatus, sessionDuration, config } = ctx;
   const display = config.display;
   const colors = config.colors;
+  const s = getStrings(config.language);
 
   const parts: string[] = [];
 
@@ -87,40 +103,40 @@ export function renderSessionLine(ctx: RenderContext): string {
     const gitParts: string[] = [gitStatus.branch];
 
     if (gitConfig.showDirty && gitStatus.isDirty) {
-      gitParts.push('*');
+      gitParts.push(s.gitDirty);
     }
 
     if (gitConfig.showAheadBehind) {
-      if (gitStatus.ahead > 0) gitParts.push(` ↑${gitStatus.ahead}`);
-      if (gitStatus.behind > 0) gitParts.push(` ↓${gitStatus.behind}`);
+      if (gitStatus.ahead > 0) gitParts.push(` ${s.gitAhead}${gitStatus.ahead}`);
+      if (gitStatus.behind > 0) gitParts.push(` ${s.gitBehind}${gitStatus.behind}`);
     }
 
     if (gitConfig.showFileStats && gitStatus.fileStats) {
       const { modified, added, deleted, untracked } = gitStatus.fileStats;
       const statParts: string[] = [];
-      if (modified > 0) statParts.push(`!${modified}`);
-      if (added > 0) statParts.push(`+${added}`);
-      if (deleted > 0) statParts.push(`✘${deleted}`);
-      if (untracked > 0) statParts.push(`?${untracked}`);
+      if (modified > 0) statParts.push(`${s.modified}${modified}`);
+      if (added > 0) statParts.push(`${s.added}${added}`);
+      if (deleted > 0) statParts.push(`${s.deleted}${deleted}`);
+      if (untracked > 0) statParts.push(`${s.untracked}${untracked}`);
       if (statParts.length > 0) {
         gitParts.push(` ${statParts.join(' ')}`);
       }
     }
 
     const gitStr = gitParts.join('');
-    parts.push(`${gitColor('git:(', colors)}${gitBranchColor(gitStr, colors)}${gitColor(')', colors)}`);
+    parts.push(`${gitColor(`${s.git}:(`, colors)}${gitBranchColor(gitStr, colors)}${gitColor(')', colors)}`);
   }
 
   // ── Duration ──────────────────────────────────────────────────
   if (display.showDuration && sessionDuration) {
-    parts.push(label(`⏱ ${sessionDuration}`, colors));
+    parts.push(label(`${s.duration} ${sessionDuration}`, colors));
   }
 
   // ── Cost ──────────────────────────────────────────────────────
   if (display.showCost) {
     const costUsd = getCostUsd(stdin);
     if (costUsd !== null) {
-      parts.push(costColor(`💰 ${formatCost(costUsd)}`, colors));
+      parts.push(costColor(`${s.cost} ${formatCost(costUsd)}`, colors));
     }
   }
 
@@ -142,7 +158,7 @@ export function renderSessionLine(ctx: RenderContext): string {
   if (display.showVersion) {
     const ver = getVersion(stdin);
     if (ver) {
-      parts.push(label(`v${ver}`, colors));
+      parts.push(label(`${s.version}${ver}`, colors));
     }
   }
 
@@ -150,9 +166,83 @@ export function renderSessionLine(ctx: RenderContext): string {
   if (display.showSessionId) {
     const sid = getSessionId(stdin, display.sessionIdLength);
     if (sid) {
-      parts.push(dim(`#${sid}`));
+      parts.push(dim(`${s.session}${sid}`));
     }
   }
 
   return parts.join(' │ ');
+}
+
+/**
+ * Expanded layout: each section on its own line with labeled prefix.
+ */
+function renderExpandedSessionLine(ctx: RenderContext): string {
+  const { stdin, gitStatus, sessionDuration, config } = ctx;
+  const display = config.display;
+  const colors = config.colors;
+  const s = getStrings(config.language);
+
+  const lines: string[] = [];
+
+  // ── Model + Project (line 1) ──────────────────────────────────
+  if (display.showModel || display.showProject) {
+    const parts: string[] = [];
+    if (display.showModel) {
+      const modelName = getModelName(stdin);
+      parts.push(modelColor(`[${modelName}]`, colors));
+    }
+    if (display.showProject) {
+      const projectName = getProjectName(stdin, config.pathLevels);
+      parts.push(projectColor(projectName, colors));
+    }
+    lines.push(parts.join(' '));
+  }
+
+  // ── Git (line 2) ──────────────────────────────────────────────
+  const gitConfig = config.gitStatus;
+  if (gitConfig.enabled && gitStatus) {
+    const gitParts: string[] = [gitStatus.branch];
+    if (gitConfig.showDirty && gitStatus.isDirty) gitParts.push(s.gitDirty);
+    if (gitConfig.showAheadBehind) {
+      if (gitStatus.ahead > 0) gitParts.push(`${s.gitAhead}${gitStatus.ahead}`);
+      if (gitStatus.behind > 0) gitParts.push(`${s.gitBehind}${gitStatus.behind}`);
+    }
+    const gitStr = gitParts.join(' ');
+    lines.push(
+      dim(`${s.git}: `) + gitBranchColor(gitStr, colors)
+    );
+  }
+
+  // ── Duration (line 3) ─────────────────────────────────────────
+  if (display.showDuration && sessionDuration) {
+    lines.push(
+      dim(`${s.duration} `) + label(sessionDuration, colors)
+    );
+  }
+
+  // ── Cost (line 4) ─────────────────────────────────────────────
+  if (display.showCost) {
+    const costUsd = getCostUsd(stdin);
+    if (costUsd !== null) {
+      lines.push(
+        dim(`${s.cost} `) + costColor(formatCost(costUsd), colors)
+      );
+    }
+  }
+
+  // ── Code stats (line 5) ───────────────────────────────────────
+  if (display.showCodeStats) {
+    const added = getLinesAdded(stdin);
+    const removed = getLinesRemoved(stdin);
+    if (added > 0 || removed > 0) {
+      const statsParts: string[] = [];
+      if (added > 0) statsParts.push(`+${formatLines(added)}`);
+      if (removed > 0) statsParts.push(`-${formatLines(removed)}`);
+      if (statsParts.length > 0) {
+        lines.push(dim(`± `) + label(statsParts.join(' '), colors));
+      }
+    }
+  }
+
+  return lines.join('\n');
 }

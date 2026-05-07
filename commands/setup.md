@@ -1,7 +1,7 @@
 ---
 description: Set up the CodeBuddy HUD statusline
 allowed-tools: Read,Write,Bash
-argument-hint: preset name (full|essential|minimal)
+argument-hint: preset (full|essential|minimal) [options]
 ---
 
 # Setup CodeBuddy HUD
@@ -12,10 +12,11 @@ You are helping the user set up the CodeBuddy HUD statusline for their CodeBuddy
 
 1. **Check Node.js**: Verify Node.js 18+ is installed by running `node --version`.
 
-2. **Determine preset** (from argument or ask user):
-   - **full**: All features enabled - model, project, git (dirty + ahead/behind + file stats), duration, cost, code stats, session ID
-   - **essential**: Core features - model, project, git (dirty), duration, cost
-   - **minimal**: Bare minimum - model and project only
+2. **Determine configuration** (from argument or ask user):
+   - **preset**: `full` | `essential` | `minimal` (default: `essential`)
+   - **theme**: `default` | `dracula` | `solarized` | `monokai` | `nord` (default: `default`)
+   - **language**: `en` | `zh` (default: `en`)
+   - **layout**: `compact` | `expanded` (default: `compact`)
 
 3. **Build the HUD**: Run `cd ${CODEBUDDY_PLUGIN_ROOT} && npm ci && npm run build`
 
@@ -33,13 +34,34 @@ You are helping the user set up the CodeBuddy HUD statusline for their CodeBuddy
 
 Replace `${CODEBUDDY_PLUGIN_ROOT}` with the actual plugin directory path.
 
-5. **Create config** (optional): Create `${CODEBUDDY_PLUGIN_ROOT}/config.json` based on the preset:
+5. **Create config**: Create `${CODEBUDDY_PLUGIN_ROOT}/config.json` based on the user's choices. The config supports:
 
-**Full preset**:
+### Minimal config (preset-only)
+
+Just specify a preset and optionally theme/language:
+
 ```json
 {
+  "preset": "essential",
+  "theme": "default",
+  "language": "en",
+  "adaptiveLayout": true
+}
+```
+
+### Full config (with overrides)
+
+Any field in the config overrides the preset value:
+
+```json
+{
+  "preset": "full",
+  "theme": "dracula",
+  "language": "zh",
+  "adaptiveLayout": true,
   "lineLayout": "compact",
   "pathLevels": 1,
+  "maxWidth": null,
   "gitStatus": {
     "enabled": true,
     "showDirty": true,
@@ -53,58 +75,39 @@ Replace `${CODEBUDDY_PLUGIN_ROOT}` with the actual plugin directory path.
     "showDuration": true,
     "showCost": true,
     "showCodeStats": true,
-    "showVersion": false,
+    "showVersion": true,
     "showSessionId": true,
-    "sessionIdLength": 8
+    "sessionIdLength": 8,
+    "showToolsLine": true,
+    "showAgentsLine": true,
+    "showTodosLine": true
   }
 }
 ```
 
-**Essential preset**:
-```json
-{
-  "lineLayout": "compact",
-  "pathLevels": 1,
-  "gitStatus": {
-    "enabled": true,
-    "showDirty": true,
-    "showAheadBehind": false,
-    "showFileStats": false
-  },
-  "display": {
-    "showModel": true,
-    "showProject": true,
-    "showContextBar": false,
-    "showDuration": true,
-    "showCost": true,
-    "showCodeStats": false,
-    "showVersion": false,
-    "showSessionId": false,
-    "sessionIdLength": 8
-  }
-}
-```
+### Preset descriptions
 
-**Minimal preset**:
-```json
-{
-  "lineLayout": "compact",
-  "pathLevels": 1,
-  "gitStatus": {
-    "enabled": false
-  },
-  "display": {
-    "showModel": true,
-    "showProject": true,
-    "showContextBar": false,
-    "showDuration": false,
-    "showCost": false,
-    "showCodeStats": false,
-    "showVersion": false,
-    "showSessionId": false,
-    "sessionIdLength": 8
-  }
-}
-```
+| Preset | Model | Project | Git | Duration | Cost | Code Stats | Tools | Agents | Todos |
+|--------|-------|---------|-----|----------|------|------------|-------|--------|-------|
+| **full** | ✓ | ✓ | full (dirty+ahead/behind+stats) | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| **essential** | ✓ | ✓ | dirty only | ✓ | ✓ | ✓ | ✓ | — | ✓ |
+| **minimal** | ✓ | ✓ | — | — | — | — | — | — | — |
+
+### Theme descriptions
+
+| Theme | Style |
+|-------|-------|
+| **default** | Classic terminal colors (cyan/yellow/magenta/green) |
+| **dracula** | Dark purple/pink/cyan palette |
+| **solarized** | Warm earth tones with blue accents |
+| **monokai** | Bold green/yellow/pink on dark |
+| **nord** | Cool blue/frost palette |
+
+### Language options
+
+| Language | Git label | Duration | Tool names |
+|----------|-----------|----------|------------|
+| **en** | git | 10m | Read, Write, Bash... |
+| **zh** | 仓库 | 10分 | 读, 写, 执行... |
 
 6. **Verify**: Tell the user the HUD is set up and will appear in the statusline on the next update cycle (~300ms).
