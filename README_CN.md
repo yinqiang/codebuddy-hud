@@ -21,38 +21,62 @@
 - **自适应布局** — 根据终端宽度自动切换紧凑/展开布局
 - **高性能** — Git 命令并行执行，大文件（>256KB）增量解析 + 字节级尾部读取，总耗时稳定在 100ms 以内
 
-## 快速开始
+## 安装
 
-### 前置条件
-
-- Node.js 18+
-- CodeBuddy Code（支持 statusline 功能）
-
-### 安装与配置
-
-1. 克隆并构建：
+### 方式一：克隆构建（推荐）
 
 ```bash
 git clone <repo-url> codebuddy-hud
 cd codebuddy-hud
-npm ci && npm run build
+npm ci
+npm run build
 ```
 
-2. 配置 CodeBuddy Code — 在 `.codebuddy/settings.json`（项目级）或 `~/.codebuddy/settings.json`（用户级）中添加：
+### 方式二：下载 Release
+
+下载最新发布包，解压后执行：
+
+```bash
+cd codebuddy-hud
+npm ci
+npm run build
+```
+
+### 注册到 CodeBuddy Code
+
+在 CodeBuddy Code 的配置文件中添加 statusline 命令。
+
+**项目级**（项目根目录下的 `.codebuddy/settings.json`）：
 
 ```json
 {
   "statusLine": {
     "type": "command",
-    "command": "node /path/to/codebuddy-hud/dist/index.js",
+    "command": "node /absolute/path/to/codebuddy-hud/dist/index.js",
     "padding": 0
   }
 }
 ```
 
-> Windows 环境下路径使用正斜杠（如 `Q:/projects/codebuddy-hud/dist/index.js`）。
+**用户级**（`~/.codebuddy/settings.json`）：
 
-3. 在插件根目录创建 `config.json`：
+```json
+{
+  "statusLine": {
+    "type": "command",
+    "command": "node /absolute/path/to/codebuddy-hud/dist/index.js",
+    "padding": 0
+  }
+}
+```
+
+> **注意**：将 `/absolute/path/to/codebuddy-hud` 替换为实际路径。Windows 环境下使用正斜杠（如 `Q:/projects/codebuddy-hud/dist/index.js`）。
+>
+> 如果用户级 `settings.json` 已存在，将 `statusLine` 合并进去即可，**不要**覆盖其他配置项。
+
+### 创建配置文件
+
+在插件根目录（与 `dist/` 同级）创建 `config.json`：
 
 ```json
 {
@@ -63,11 +87,13 @@ npm ci && npm run build
 }
 ```
 
-4. 验证安装：
+### 验证安装
 
 ```bash
 echo '{"model":{"id":"test","display_name":"Test"},"workspace":{"current_dir":"'$(pwd)'","project_dir":"'$(pwd)'"},"cost":{"total_cost_usd":0.01,"total_duration_ms":60000,"total_api_duration_ms":5000,"total_lines_added":10,"total_lines_removed":2},"session_id":"setup-test","version":"2.9.0"}' | node dist/index.js
 ```
+
+正常情况下会输出彩色状态栏，如 `[Test] │ 你的项目 │ 仓库:(main) │ ...`。
 
 ## 配置说明
 

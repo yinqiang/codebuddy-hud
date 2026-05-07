@@ -21,38 +21,62 @@ Real-time statusline HUD for [CodeBuddy Code](https://www.codebuddy.cn/) — con
 - **Adaptive Layout** — Automatically switches between compact and expanded layouts based on terminal width
 - **High Performance** — Parallel git execution, incremental transcript parsing with byte-level tail reading for large files (>256KB), consistently under 100ms total
 
-## Quick Start
+## Installation
 
-### Prerequisites
-
-- Node.js 18+
-- CodeBuddy Code with statusline support
-
-### Install & Setup
-
-1. Clone and build:
+### Option 1: Clone & Build (Recommended)
 
 ```bash
 git clone <repo-url> codebuddy-hud
 cd codebuddy-hud
-npm ci && npm run build
+npm ci
+npm run build
 ```
 
-2. Configure CodeBuddy Code — add to `.codebuddy/settings.json` (project-level) or `~/.codebuddy/settings.json` (user-level):
+### Option 2: Download Release
+
+Download the latest release archive, extract it, and run:
+
+```bash
+cd codebuddy-hud
+npm ci
+npm run build
+```
+
+### Register with CodeBuddy Code
+
+Add the statusline command to your CodeBuddy Code settings.
+
+**Project-level** (`.codebuddy/settings.json` in your project root):
 
 ```json
 {
   "statusLine": {
     "type": "command",
-    "command": "node /path/to/codebuddy-hud/dist/index.js",
+    "command": "node /absolute/path/to/codebuddy-hud/dist/index.js",
     "padding": 0
   }
 }
 ```
 
-> On Windows, use forward slashes in the path (e.g., `Q:/projects/codebuddy-hud/dist/index.js`).
+**User-level** (`~/.codebuddy/settings.json`):
 
-3. Create `config.json` in the plugin root:
+```json
+{
+  "statusLine": {
+    "type": "command",
+    "command": "node /absolute/path/to/codebuddy-hud/dist/index.js",
+    "padding": 0
+  }
+}
+```
+
+> **Important**: Replace `/absolute/path/to/codebuddy-hud` with the actual path. On Windows, use forward slashes (e.g., `Q:/projects/codebuddy-hud/dist/index.js`).
+>
+> If the user-level `settings.json` already exists, merge the `statusLine` key into it — do NOT overwrite other settings.
+
+### Create Config
+
+Create `config.json` in the plugin root (same directory as `dist/`):
 
 ```json
 {
@@ -63,11 +87,13 @@ npm ci && npm run build
 }
 ```
 
-4. Verify:
+### Verify
 
 ```bash
 echo '{"model":{"id":"test","display_name":"Test"},"workspace":{"current_dir":"'$(pwd)'","project_dir":"'$(pwd)'"},"cost":{"total_cost_usd":0.01,"total_duration_ms":60000,"total_api_duration_ms":5000,"total_lines_added":10,"total_lines_removed":2},"session_id":"setup-test","version":"2.9.0"}' | node dist/index.js
 ```
+
+You should see a colored statusline like `[Test] │ your-project │ git:(main) │ ...`.
 
 ## Configuration
 
