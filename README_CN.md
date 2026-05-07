@@ -23,7 +23,22 @@
 
 ## 安装
 
-### 方式一：克隆构建（推荐）
+### 方式一：插件市场（推荐）
+
+```bash
+# 添加本仓库为插件市场
+/plugin marketplace add yinqiangzhu/codebuddy-hud
+
+# 安装插件
+/plugin install codebuddy-hud
+
+# 运行 setup 命令完成配置
+/codebuddy-hud:setup
+```
+
+三条命令即可完成安装。setup 命令会自动处理构建、statusline 注册和配置文件创建。
+
+### 方式二：克隆构建（手动）
 
 ```bash
 git clone <repo-url> codebuddy-hud
@@ -32,7 +47,7 @@ npm ci
 npm run build
 ```
 
-### 方式二：下载 Release
+### 方式三：下载 Release
 
 下载最新发布包，解压后执行：
 

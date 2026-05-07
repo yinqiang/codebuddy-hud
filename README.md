@@ -23,7 +23,22 @@ Real-time statusline HUD for [CodeBuddy Code](https://www.codebuddy.cn/) — con
 
 ## Installation
 
-### Option 1: Clone & Build (Recommended)
+### Option 1: Marketplace (Recommended)
+
+```bash
+# Add this repo as a plugin marketplace
+/plugin marketplace add yinqiangzhu/codebuddy-hud
+
+# Install the plugin
+/plugin install codebuddy-hud
+
+# Run the setup command to configure
+/codebuddy-hud:setup
+```
+
+That's it — the setup command handles building, statusline registration, and config creation automatically.
+
+### Option 2: Clone & Build (Manual)
 
 ```bash
 git clone <repo-url> codebuddy-hud
@@ -32,7 +47,7 @@ npm ci
 npm run build
 ```
 
-### Option 2: Download Release
+### Option 3: Download Release
 
 Download the latest release archive, extract it, and run:
 
