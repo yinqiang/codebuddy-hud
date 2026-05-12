@@ -25,5 +25,7 @@
   "requirements": {
     "node": ">=18.0.0"
   },
-  "commands": ["./setup.md"]
+  "commands": [
+    "./commands/setup.md"
+  ]
 }
