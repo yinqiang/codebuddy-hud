@@ -92,6 +92,32 @@ Any field in the config overrides the preset value:
 }
 ```
 
+### Context Bar (context usage)
+
+To show a visual context usage bar (token usage vs. context window):
+
+```json
+{
+  "display": {
+    "showContextBar": true
+  },
+  "contextBar": {
+    "mode": "percent",
+    "showBreakdown": false
+  }
+}
+```
+
+`contextBar.mode` options:
+| Mode | Example Output |
+|-------|----------------|
+| `percent` (default) | `▐██░░░░░░░ 8%` |
+| `tokens` | `▐██░░░░░░░ 10.8k/128k` |
+| `remaining` | `▐██░░░░░░░ 117k left` |
+| `both` | `▐██░░░░░░░ 8% (10.8k/128k)` |
+
+Note: Context window size is estimated by model ID. If the model is unknown, only token count is shown.
+
 7. **Verify**: Run a quick smoke test:
    ```bash
    echo '{"model":{"id":"test","display_name":"Test"},"workspace":{"current_dir":"'$(pwd)'","project_dir":"'$(pwd)'"},"cost":{"total_cost_usd":0.01,"total_duration_ms":60000,"total_api_duration_ms":5000,"total_lines_added":10,"total_lines_removed":2},"session_id":"setup-test","version":"2.9.0"}' | node ${CODEBUDDY_PLUGIN_ROOT}/dist/index.js

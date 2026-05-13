@@ -15,6 +15,7 @@ Real-time statusline HUD for [CodeBuddy Code](https://www.codebuddy.cn/) — con
 - **Tool Activity** — Active tool with detail, completed tool call counts (top 5)
 - **Agent Tracking** — Active sub-agent descriptions, completed agent count
 - **Task Progress** — Visual progress bar, completed/total, active task subjects
+- **Context Usage Bar** — Visual progress bar showing token usage vs. context window (%, tokens, remaining, or both)
 - **3 Presets** — `full` / `essential` / `minimal` for different information density
 - **5 Themes** — `default` / `dracula` / `solarized` / `monokai` / `nord`
 - **i18n** — English (`en`) and Chinese (`zh`) with localized labels, tool names, and duration formats
@@ -170,8 +171,24 @@ Any field overrides the preset value:
     "showAgentsLine": true,
     "showTodosLine": true
   }
+  "contextBar": {
+    "mode": "percent",
+    "showBreakdown": false
+  }
 }
-```
+
+### Context Bar
+
+Shows a visual progress bar for token usage vs. context window:
+
+| `mode` | Example Output |
+|--------|----------------|
+| `percent` (default) | `▐██░░░░░░ 8%` |
+| `tokens` | `▐██░░░░░░ 10.8k/128k` |
+| `remaining` | `▐██░░░░░░ 117k left` |
+| `both` | `▐██░░░░░░ 8% (10.8k/128k)` |
+
+Note: Context window size is estimated by model ID. If the model is unknown, only the token count is shown.
 
 ## How It Works
 
