@@ -93,29 +93,25 @@ export async function parseTranscriptIncremental(filePath, tailLines = 200) {
 }
 // ─── File parsing ───────────────────────────────────────────────────
 async function parseTranscriptFile(filePath, _fileSize) {
-    const entries = [];
     try {
-        const rl = readline.createInterface({
-            input: fs.createReadStream(filePath, { encoding: 'utf8' }),
-            crlfDelay: Infinity,
-        });
-        for await (const line of rl) {
+        const content = fs.readFileSync(filePath, 'utf8');
+        const entries = [];
+        for (const line of content.split('\n')) {
             const trimmed = line.trim();
             if (!trimmed)
                 continue;
             try {
-                const entry = JSON.parse(trimmed);
-                entries.push(entry);
+                entries.push(JSON.parse(trimmed));
             }
             catch {
                 // Skip malformed lines
             }
         }
+        return entries.length > 0 ? buildSummary(entries) : null;
     }
     catch {
         return null;
     }
-    return buildSummary(entries);
 }
 function parseTranscriptContent(content) {
     const entries = [];
@@ -219,6 +215,15 @@ function buildSummary(entries) {
     let foundUsage = false;
     // Try to determine model id from entries (for context window estimation)
     let modelId = '';
+    function getModelId(entry) {
+        const raw = entry;
+        const m = raw['model'];
+        if (typeof m === 'string')
+            return m;
+        if (m && typeof m === 'object')
+            return m['id'] ?? '';
+        return '';
+    }
     for (const entry of entries) {
         const type = entry.type;
         // Try to extract usage data from any entry
@@ -240,10 +245,7 @@ function buildSummary(entries) {
         }
         // Try to capture model id for context window estimation
         if (!modelId) {
-            const raw = entry;
-            const mid = raw['model'];
-            if (mid)
-                modelId = mid;
+            modelId = getModelId(entry);
         }
         if (type === 'function_call') {
             const fc = entry;

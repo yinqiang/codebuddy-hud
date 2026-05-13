@@ -139,29 +139,22 @@ async function parseTranscriptFile(
   filePath: string,
   _fileSize: number,
 ): Promise<TranscriptSummary | null> {
-  const entries: TranscriptEntry[] = [];
-
   try {
-    const rl = readline.createInterface({
-      input: fs.createReadStream(filePath, { encoding: 'utf8' }),
-      crlfDelay: Infinity,
-    });
-
-    for await (const line of rl) {
+    const content = fs.readFileSync(filePath, 'utf8');
+    const entries: TranscriptEntry[] = [];
+    for (const line of content.split('\n')) {
       const trimmed = line.trim();
       if (!trimmed) continue;
       try {
-        const entry = JSON.parse(trimmed) as TranscriptEntry;
-        entries.push(entry);
+        entries.push(JSON.parse(trimmed) as TranscriptEntry);
       } catch {
         // Skip malformed lines
       }
     }
+    return entries.length > 0 ? buildSummary(entries) : null;
   } catch {
     return null;
   }
-
-  return buildSummary(entries);
 }
 
 function parseTranscriptContent(content: string): TranscriptSummary | null {
@@ -272,6 +265,13 @@ function buildSummary(entries: TranscriptEntry[]): TranscriptSummary {
 
   // Try to determine model id from entries (for context window estimation)
   let modelId = '';
+  function getModelId(entry: TranscriptEntry): string {
+    const raw = entry as unknown as Record<string, unknown>;
+    const m = raw['model'];
+    if (typeof m === 'string') return m;
+    if (m && typeof m === 'object') return (m as Record<string, unknown>)['id'] as string ?? '';
+    return '';
+  }
 
   for (const entry of entries) {
     const type = entry.type;
@@ -295,9 +295,7 @@ function buildSummary(entries: TranscriptEntry[]): TranscriptSummary {
 
     // Try to capture model id for context window estimation
     if (!modelId) {
-      const raw = entry as unknown as Record<string, unknown>;
-      const mid = raw['model'] as string | undefined;
-      if (mid) modelId = mid;
+      modelId = getModelId(entry);
     }
 
     if (type === 'function_call') {

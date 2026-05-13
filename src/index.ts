@@ -49,7 +49,7 @@ export async function main(): Promise<void> {
     //    Use incremental parse for large files (> 256KB) to stay within 300ms budget
     let transcript: TranscriptSummary | null = null;
     const transcriptPath = stdin.transcript_path;
-    if (transcriptPath && (config.display.showToolsLine || config.display.showAgentsLine || config.display.showTodosLine)) {
+    if (transcriptPath && (config.display.showContextBar || config.display.showToolsLine || config.display.showAgentsLine || config.display.showTodosLine)) {
       transcript = await parseTranscriptIncremental(transcriptPath);
     }
     const t4 = profile ? performance.now() : 0;
