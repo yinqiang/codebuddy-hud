@@ -6,8 +6,7 @@
  */
 
 import type { RenderContext, ContextValueMode } from '../types.js';
-import { coloredBar } from './colors.js';
-import { getStrings, t } from '../i18n.js';
+import { getStrings } from '../i18n.js';
 
 const DEFAULT_VALUE_MODE: ContextValueMode = 'percent';
 
