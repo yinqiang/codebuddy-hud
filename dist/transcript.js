@@ -135,6 +135,67 @@ function parseTranscriptContent(content) {
     return buildSummary(entries);
 }
 // ─── Summary builder ────────────────────────────────────────────────
+/** Estimate context window size by model id. Returns 0 if unknown. */
+function estimateContextWindow(modelId) {
+    const id = modelId.toLowerCase();
+    // Common model context windows (in tokens)
+    if (id.includes('glm-4.5'))
+        return 131072;
+    if (id.includes('glm-5'))
+        return 131072;
+    if (id.includes('claude-3.5'))
+        return 200000;
+    if (id.includes('claude-3.7'))
+        return 200000;
+    if (id.includes('claude-4'))
+        return 200000;
+    if (id.includes('gpt-4o'))
+        return 128000;
+    if (id.includes('gpt-4-turbo'))
+        return 128000;
+    if (id.includes('gemini-1.5-pro'))
+        return 2000000;
+    if (id.includes('gemini-2'))
+        return 1000000;
+    return 0;
+}
+/** Try to extract usage data from a transcript entry. Returns null if not found. */
+function extractUsage(entry) {
+    // Check common fields where usage might appear
+    const raw = entry;
+    // Pattern 1: entry has a direct `usage` object (Claude API style)
+    const usage = raw['usage'];
+    if (usage) {
+        const input = Number(usage['input_tokens'] ?? usage['prompt_tokens'] ?? 0);
+        const output = Number(usage['output_tokens'] ?? usage['completion_tokens'] ?? 0);
+        if (input > 0 || output > 0) {
+            return { inputTokens: input, outputTokens: output };
+        }
+    }
+    // Pattern 2: entry has top-level token fields
+    const input = Number(raw['input_tokens'] ?? raw['prompt_tokens'] ?? 0);
+    const output = Number(raw['output_tokens'] ?? raw['completion_tokens'] ?? 0);
+    if (input > 0 || output > 0) {
+        return { inputTokens: input, outputTokens: output };
+    }
+    // Pattern 3: message content contains usage (some APIs nest it)
+    const content = raw['content'];
+    if (Array.isArray(content)) {
+        for (const item of content) {
+            if (item && typeof item === 'object') {
+                const itemRec = item;
+                if (itemRec['type'] === 'usage' || itemRec['type'] === 'token_usage') {
+                    const input = Number(itemRec['input_tokens'] ?? itemRec['prompt_tokens'] ?? 0);
+                    const output = Number(itemRec['output_tokens'] ?? itemRec['completion_tokens'] ?? 0);
+                    if (input > 0 || output > 0) {
+                        return { inputTokens: input, outputTokens: output };
+                    }
+                }
+            }
+        }
+    }
+    return null;
+}
 function buildSummary(entries) {
     // Track tool calls: callId → tool name
     const pendingCalls = new Map();
@@ -151,8 +212,39 @@ function buildSummary(entries) {
     let taskCounter = 0;
     // Track last assistant status
     let lastAssistantStatus = null;
+    // Track cumulative token usage
+    let totalInputTokens = 0;
+    let totalOutputTokens = 0;
+    let contextWindow = 0;
+    let foundUsage = false;
+    // Try to determine model id from entries (for context window estimation)
+    let modelId = '';
     for (const entry of entries) {
         const type = entry.type;
+        // Try to extract usage data from any entry
+        if (!foundUsage) {
+            const usage = extractUsage(entry);
+            if (usage) {
+                totalInputTokens = usage.inputTokens;
+                totalOutputTokens = usage.outputTokens;
+                foundUsage = true;
+            }
+        }
+        else {
+            // Keep updating with latest usage data
+            const usage = extractUsage(entry);
+            if (usage) {
+                totalInputTokens = usage.inputTokens;
+                totalOutputTokens = usage.outputTokens;
+            }
+        }
+        // Try to capture model id for context window estimation
+        if (!modelId) {
+            const raw = entry;
+            const mid = raw['model'];
+            if (mid)
+                modelId = mid;
+        }
         if (type === 'function_call') {
             const fc = entry;
             const toolName = fc.name;
@@ -256,11 +348,23 @@ function buildSummary(entries) {
         inProgress: taskInProgress,
         activeSubjects,
     };
+    // Compute context usage
+    const cw = foundUsage ? estimateContextWindow(modelId) : 0;
+    const totalTokens = totalInputTokens + totalOutputTokens;
+    const percent = cw > 0 ? Math.round((totalTokens / cw) * 100) : -1;
+    const contextUsage = foundUsage ? {
+        inputTokens: totalInputTokens,
+        outputTokens: totalOutputTokens,
+        totalTokens,
+        contextWindow: cw,
+        percentUsed: percent,
+    } : null;
     return {
         toolStats,
         agentStatus,
         taskProgress,
         lastAssistantStatus,
+        contextUsage,
     };
 }
 // ─── Argument parsing helpers ────────────────────────────────────────

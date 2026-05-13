@@ -222,6 +222,10 @@ export function buildConfig(raw) {
             agentActive: raw.colors?.agentActive ?? themeColors.agentActive,
             taskProgress: raw.colors?.taskProgress ?? themeColors.taskProgress,
         },
+        contextBar: {
+            mode: raw.contextBar?.mode ?? preset.contextBar?.mode ?? d.contextBar.mode,
+            showBreakdown: raw.contextBar?.showBreakdown ?? preset.contextBar?.showBreakdown ?? d.contextBar.showBreakdown,
+        },
     };
     return config;
 }

@@ -138,12 +138,27 @@ export interface TaskProgress {
   activeSubjects: string[];
 }
 
+export interface ContextUsage {
+  /** Input tokens used (prompt + context) */
+  inputTokens: number;
+  /** Output tokens generated */
+  outputTokens: number;
+  /** Total tokens used this session */
+  totalTokens: number;
+  /** Context window size for the current model (0 if unknown) */
+  contextWindow: number;
+  /** Percentage of context window used (0-100, -1 if unknown) */
+  percentUsed: number;
+}
+
 export interface TranscriptSummary {
   toolStats: ToolStats;
   agentStatus: AgentStatus;
   taskProgress: TaskProgress;
   /** Most recent assistant message status */
   lastAssistantStatus: string | null;
+  /** Context token usage (null if not available) */
+  contextUsage: ContextUsage | null;
 }
 
 // ─── Render Context ─────────────────────────────────────────────────
@@ -190,6 +205,13 @@ export interface HudConfig {
     showTodosLine: boolean;
   };
 
+  /** Context bar display mode (how to show token usage) */
+  contextBar: {
+    mode: ContextValueMode;
+    /** Show input/output breakdown */
+    showBreakdown: boolean;
+  };
+
   colors: {
     model: string;
     project: string;
@@ -232,6 +254,11 @@ export const DEFAULT_CONFIG: HudConfig = {
     showToolsLine: true,
     showAgentsLine: true,
     showTodosLine: true,
+  },
+
+  contextBar: {
+    mode: 'percent',
+    showBreakdown: false,
   },
 
   colors: {

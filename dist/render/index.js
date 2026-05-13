@@ -9,6 +9,7 @@ import { renderSessionLine } from './session-line.js';
 import { renderToolsLine } from './tools-line.js';
 import { renderAgentsLine } from './agents-line.js';
 import { renderTodosLine } from './todos-line.js';
+import { renderContextBar } from './context-bar.js';
 import { stripAnsi, RESET } from './colors.js';
 import { getTerminalWidth, UNKNOWN_TERMINAL_WIDTH } from '../utils/terminal.js';
 import { visualLength } from './width.js';
@@ -71,6 +72,13 @@ export function render(ctx) {
         // Session line may contain newlines in expanded mode
         for (const subLine of sessionLine.split('\n')) {
             lines.push(truncateLine(subLine, maxWidth));
+        }
+    }
+    // Context bar (Phase 3)
+    if (effectiveCtx.config.display.showContextBar) {
+        const contextLine = renderContextBar(effectiveCtx);
+        if (contextLine) {
+            lines.push(truncateLine(contextLine, maxWidth));
         }
     }
     // Line 2: Tool activity (Phase 2)

@@ -27,6 +27,10 @@ export const DEFAULT_CONFIG = {
         showAgentsLine: true,
         showTodosLine: true,
     },
+    contextBar: {
+        mode: 'percent',
+        showBreakdown: false,
+    },
     colors: {
         model: 'cyan',
         project: 'yellow',
