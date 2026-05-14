@@ -41,7 +41,7 @@ Replace `${CODEBUDDY_PLUGIN_ROOT}` with the actual absolute path to the plugin d
 
 **Important**: If updating user-level settings (`~/.codebuddy/settings.json`), merge the `statusLine` key into the existing JSON — do NOT overwrite other settings like `model`, `sandbox`, `enabledPlugins`, etc.
 
-6. **Create config**: Create `${CODEBUDDY_PLUGIN_ROOT}/config.json` based on the user's choices.
+6. **Create config**: Create `${CODEBUDDY_PLUGIN_ROOT}/config.json` based on the user's choices. By default, enable the context bar by including `"showContextBar": true` in the `display` section and adding a `contextBar` config block (see Full config example below).
 
 ### Minimal config (preset-only)
 
@@ -78,7 +78,7 @@ Any field in the config overrides the preset value:
   "display": {
     "showModel": true,
     "showProject": true,
-    "showContextBar": false,
+    "showContextBar": true,
     "showDuration": true,
     "showCost": true,
     "showCodeStats": true,
@@ -88,6 +88,10 @@ Any field in the config overrides the preset value:
     "showToolsLine": true,
     "showAgentsLine": true,
     "showTodosLine": true
+  },
+  "contextBar": {
+    "mode": "percent",
+    "showBreakdown": false
   }
 }
 ```
