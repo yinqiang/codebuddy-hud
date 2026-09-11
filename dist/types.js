@@ -30,6 +30,7 @@ export const DEFAULT_CONFIG = {
     contextBar: {
         mode: 'percent',
         showBreakdown: false,
+        showCacheHit: true,
     },
     colors: {
         model: 'cyan',

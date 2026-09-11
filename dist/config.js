@@ -7,6 +7,7 @@
  */
 import * as fs from 'node:fs';
 import * as path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { DEFAULT_CONFIG } from './types.js';
 const PRESETS = {
     full: {
@@ -151,11 +152,9 @@ const THEMES = {
  * Stored alongside the statusline script in the plugin directory.
  */
 export function getConfigPath() {
-    const pluginDir = path.dirname(path.dirname(new URL(import.meta.url).pathname));
-    const normalized = process.platform === 'win32'
-        ? pluginDir.replace(/^\/([A-Z]:)/, '$1')
-        : pluginDir;
-    return path.join(normalized, 'config.json');
+    // fileURLToPath handles Windows drive letters (either case) and percent-encoded paths
+    const pluginDir = path.dirname(path.dirname(fileURLToPath(import.meta.url)));
+    return path.join(pluginDir, 'config.json');
 }
 /**
  * Load user configuration, merged with defaults.
@@ -225,6 +224,7 @@ export function buildConfig(raw) {
         contextBar: {
             mode: raw.contextBar?.mode ?? preset.contextBar?.mode ?? d.contextBar.mode,
             showBreakdown: raw.contextBar?.showBreakdown ?? preset.contextBar?.showBreakdown ?? d.contextBar.showBreakdown,
+            showCacheHit: raw.contextBar?.showCacheHit ?? preset.contextBar?.showCacheHit ?? d.contextBar.showCacheHit,
         },
     };
     return config;

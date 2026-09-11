@@ -15,7 +15,7 @@ Real-time statusline HUD for [CodeBuddy Code](https://www.codebuddy.cn/) — con
 - **Tool Activity** — Active tool with detail, completed tool call counts (top 5)
 - **Agent Tracking** — Active sub-agent descriptions, completed agent count
 - **Task Progress** — Visual progress bar, completed/total, active task subjects
-- **Context Usage Bar** — Visual progress bar showing token usage vs. context window (%, tokens, remaining, or both)
+- **Context Usage Bar** — Visual progress bar showing token usage vs. context window (%, tokens, remaining, or both), plus prompt cache hit rate
 - **3 Presets** — `full` / `essential` / `minimal` for different information density
 - **5 Themes** — `default` / `dracula` / `solarized` / `monokai` / `nord`
 - **i18n** — English (`en`) and Chinese (`zh`) with localized labels, tool names, and duration formats
@@ -173,7 +173,8 @@ Any field overrides the preset value:
   }
   "contextBar": {
     "mode": "percent",
-    "showBreakdown": false
+    "showBreakdown": false,
+    "showCacheHit": true
   }
 }
 
@@ -187,6 +188,14 @@ Shows a visual progress bar for token usage vs. context window:
 | `tokens` | `▐██░░░░░░ 10.8k/128k` |
 | `remaining` | `▐██░░░░░░ 117k left` |
 | `both` | `▐██░░░░░░ 8% (10.8k/128k)` |
+
+With `contextBar.showCacheHit` enabled (default), the bar also shows the prompt cache hit rate:
+
+```
+▐██░░░░░░ 8% │ ⚡cache 99.9%
+```
+
+The rate is cached input tokens divided by total input tokens, taken from the latest API usage record in the transcript (supports both Anthropic `cache_read_input_tokens` and OpenAI/DeepSeek `prompt_cache_hit_tokens`). It is hidden when the transcript carries no cache fields.
 
 Note: Context window size is estimated by model ID. If the model is unknown, only the token count is shown.
 

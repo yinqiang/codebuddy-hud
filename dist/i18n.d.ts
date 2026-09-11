@@ -33,6 +33,7 @@ interface I18nStrings {
     taskProgress: string;
     taskMore: string;
     tasksLabel: string;
+    cacheHit: string;
     lessThanMinute: string;
     minute: string;
     hour: string;

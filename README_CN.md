@@ -15,7 +15,7 @@
 - **工具活动** — 当前执行的工具及详情，已完成工具调用计数（前 5 个）
 - **代理追踪** — 活跃子代理描述，已完成代理计数
 - **任务进度** — 可视化进度条，已完成/总数，进行中任务标题
-- **上下文用量条** — 可视化令牌用量 vs. 上下文窗口（支持百分比、令牌数、剩余量、同时显示）
+- **上下文用量条** — 可视化令牌用量 vs. 上下文窗口（支持百分比、令牌数、剩余量、同时显示），并显示 Prompt 缓存命中率
 - **3 种预设** — `full` / `essential` / `minimal`，按需选择信息密度
 - **5 种主题** — `default` / `dracula` / `solarized` / `monokai` / `nord`
 - **国际化** — 英文（`en`）与中文（`zh`），标签、工具名、时长格式均已本地化
@@ -173,7 +173,8 @@ echo '{"model":{"id":"test","display_name":"Test"},"workspace":{"current_dir":"'
   }
   "contextBar": {
     "mode": "percent",
-    "showBreakdown": false
+    "showBreakdown": false,
+    "showCacheHit": true
   }
 }
 
@@ -187,6 +188,14 @@ echo '{"model":{"id":"test","display_name":"Test"},"workspace":{"current_dir":"'
 | `tokens` | `▐██░░░░░░ 10.8k/128k` |
 | `remaining` | `▐██░░░░░░ 117k left` |
 | `both` | `▐██░░░░░░ 8% (10.8k/128k)` |
+
+开启 `contextBar.showCacheHit`（默认开启）后，用量条会追加 Prompt 缓存命中率：
+
+```
+▐██░░░░░░ 8% │ ⚡缓存 99.9%
+```
+
+命中率 = 缓存读取的输入令牌 / 总输入令牌，取自 transcript 中最近一次 API 调用的 usage（同时兼容 Anthropic 的 `cache_read_input_tokens` 与 OpenAI/DeepSeek 的 `prompt_cache_hit_tokens`）。transcript 无缓存字段时不显示。
 
 注意：上下文窗口大小通过模型 ID 估算。如模型未知，仅显示令牌数。
 

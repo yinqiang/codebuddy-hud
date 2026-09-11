@@ -5,6 +5,7 @@
  * token usage vs. context window capacity.
  */
 import { getStrings } from '../i18n.js';
+import { dim } from './colors.js';
 const DEFAULT_VALUE_MODE = 'percent';
 /** Color thresholds (percentage) */
 const COLOR_GREEN = 0;
@@ -17,12 +18,27 @@ function usageColor(percent) {
         return (s) => `\x1b[33m${s}\x1b[0m`; // yellow
     return (s) => `\x1b[32m${s}\x1b[0m`; // green
 }
+/** Cache hit rate color: green when warm, dim when the cache is mostly cold. */
+function cacheColor(rate) {
+    if (rate >= 0.5)
+        return (s) => `\x1b[32m${s}\x1b[0m`; // green
+    if (rate >= 0.2)
+        return (s) => `\x1b[33m${s}\x1b[0m`; // yellow
+    return (s) => `\x1b[2m${s}\x1b[0m`; // dim
+}
 function formatTokens(n) {
     if (n >= 1000000)
         return `${(n / 1000000).toFixed(1)}M`;
     if (n >= 1000)
         return `${(n / 1000).toFixed(1)}k`;
     return String(n);
+}
+function formatHitRate(rate) {
+    const percent = rate * 100;
+    // Never round a near-perfect rate up to 100%
+    if (percent >= 99.95 && percent < 100)
+        return '99.9%';
+    return `${percent.toFixed(1)}%`;
 }
 /**
  * Render the context usage bar.
@@ -36,7 +52,7 @@ export function renderContextBar(ctx) {
     if (!usage)
         return '';
     const s = getStrings(config.language);
-    const mode = config.contextValueMode ?? DEFAULT_VALUE_MODE;
+    const mode = config.contextBar.mode ?? DEFAULT_VALUE_MODE;
     const percent = usage.percentUsed;
     const hasWindow = usage.contextWindow > 0;
     // Build the visual progress bar (10 chars wide)
@@ -68,6 +84,10 @@ export function renderContextBar(ctx) {
         // No context window info, just show tokens used
         parts.push(`⚡ ${formatTokens(usage.totalTokens)} tokens`);
     }
-    return parts.join(' ');
+    // Prompt cache hit rate (appended when the usage data carries cache fields)
+    if (config.contextBar.showCacheHit && usage.cacheHitRate >= 0) {
+        parts.push(`${dim(s.cacheHit)} ${cacheColor(usage.cacheHitRate)(formatHitRate(usage.cacheHitRate))}`);
+    }
+    return parts.join(' │ ');
 }
 //# sourceMappingURL=context-bar.js.map

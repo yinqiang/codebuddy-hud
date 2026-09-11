@@ -139,11 +139,7 @@ function estimateContextWindow(modelId) {
         return 131072;
     if (id.includes('glm-5'))
         return 131072;
-    if (id.includes('claude-3.5'))
-        return 200000;
-    if (id.includes('claude-3.7'))
-        return 200000;
-    if (id.includes('claude-4'))
+    if (id.includes('claude'))
         return 200000;
     if (id.includes('gpt-4o'))
         return 128000;
@@ -155,37 +151,156 @@ function estimateContextWindow(modelId) {
         return 1000000;
     return 0;
 }
-/** Try to extract usage data from a transcript entry. Returns null if not found. */
-function extractUsage(entry) {
-    // Check common fields where usage might appear
-    const raw = entry;
-    // Pattern 1: entry has a direct `usage` object (Claude API style)
-    const usage = raw['usage'];
-    if (usage) {
-        const input = Number(usage['input_tokens'] ?? usage['prompt_tokens'] ?? 0);
-        const output = Number(usage['output_tokens'] ?? usage['completion_tokens'] ?? 0);
-        if (input > 0 || output > 0) {
-            return { inputTokens: input, outputTokens: output };
+function asTokenCount(value) {
+    const n = Number(value);
+    return Number.isFinite(n) && n > 0 ? n : 0;
+}
+function firstTokenCount(record, keys) {
+    for (const key of keys) {
+        const n = asTokenCount(record[key]);
+        if (n > 0)
+            return n;
+    }
+    return 0;
+}
+function hasOwnKey(record, key) {
+    return Object.prototype.hasOwnProperty.call(record, key);
+}
+/** Read `cached_tokens` from prompt/input token detail objects or arrays. */
+function readCachedTokensFromDetails(usage) {
+    for (const key of ['prompt_tokens_details', 'input_tokens_details']) {
+        const details = usage[key];
+        if (Array.isArray(details)) {
+            for (const item of details) {
+                if (item && typeof item === 'object') {
+                    const n = asTokenCount(item['cached_tokens']);
+                    if (n > 0)
+                        return n;
+                }
+            }
+        }
+        else if (details && typeof details === 'object') {
+            const n = asTokenCount(details['cached_tokens']);
+            if (n > 0)
+                return n;
         }
     }
-    // Pattern 2: entry has top-level token fields
-    const input = Number(raw['input_tokens'] ?? raw['prompt_tokens'] ?? 0);
-    const output = Number(raw['output_tokens'] ?? raw['completion_tokens'] ?? 0);
-    if (input > 0 || output > 0) {
-        return { inputTokens: input, outputTokens: output };
+    return 0;
+}
+/**
+ * Parse one usage object into token counts.
+ * Supports both cache field families:
+ * - Anthropic style: `cache_read_input_tokens` / `cache_creation_input_tokens`
+ * - OpenAI/DeepSeek style: `prompt_cache_hit_tokens` / `prompt_cache_miss_tokens` /
+ *   `prompt_tokens_details.cached_tokens`
+ */
+function parseUsageObject(usage) {
+    const inputTokens = firstTokenCount(usage, ['input_tokens', 'prompt_tokens']);
+    const outputTokens = firstTokenCount(usage, ['output_tokens', 'completion_tokens']);
+    if (inputTokens <= 0 && outputTokens <= 0)
+        return null;
+    const hasCacheInfo = hasOwnKey(usage, 'cache_read_input_tokens') ||
+        hasOwnKey(usage, 'cache_creation_input_tokens') ||
+        hasOwnKey(usage, 'prompt_cache_hit_tokens') ||
+        hasOwnKey(usage, 'prompt_cache_miss_tokens') ||
+        hasOwnKey(usage, 'prompt_cache_write_tokens') ||
+        hasOwnKey(usage, 'cached_tokens') ||
+        hasOwnKey(usage, 'prompt_tokens_details') ||
+        hasOwnKey(usage, 'input_tokens_details');
+    let cacheReadTokens = firstTokenCount(usage, [
+        'cache_read_input_tokens',
+        'prompt_cache_hit_tokens',
+        'cached_tokens',
+    ]);
+    // OpenAI-style fields always count the cached portion inside prompt_tokens
+    let cacheReadIsOpenAiStyle = hasOwnKey(usage, 'prompt_cache_hit_tokens') || hasOwnKey(usage, 'cached_tokens');
+    if (cacheReadTokens === 0) {
+        cacheReadTokens = readCachedTokensFromDetails(usage);
+        if (cacheReadTokens > 0)
+            cacheReadIsOpenAiStyle = true;
     }
-    // Pattern 3: message content contains usage (some APIs nest it)
+    const cacheCreationTokens = firstTokenCount(usage, [
+        'cache_creation_input_tokens',
+        'prompt_cache_write_tokens',
+    ]);
+    const cacheMissTokens = firstTokenCount(usage, ['prompt_cache_miss_tokens']);
+    // OpenAI-style prompt_tokens includes the cached portion, Anthropic-style
+    // input_tokens excludes it. Detect which convention this usage object follows.
+    let inputIncludesCache = false;
+    if (cacheReadTokens > inputTokens) {
+        // The cached portion cannot exceed the prompt itself
+        inputIncludesCache = false;
+    }
+    else if (cacheMissTokens > 0 && Math.abs(cacheMissTokens + cacheReadTokens - inputTokens) <= 1) {
+        inputIncludesCache = true;
+    }
+    else if (cacheReadIsOpenAiStyle) {
+        inputIncludesCache = true;
+    }
+    else {
+        const totalTokens = asTokenCount(usage['total_tokens']);
+        if (totalTokens > 0 &&
+            Math.abs(totalTokens - (inputTokens + outputTokens)) <= Math.max(1, Math.round(totalTokens * 0.01))) {
+            inputIncludesCache = true;
+        }
+    }
+    return {
+        inputTokens,
+        outputTokens,
+        cacheReadTokens,
+        cacheCreationTokens,
+        cacheMissTokens,
+        hasCacheInfo,
+        inputIncludesCache,
+    };
+}
+/**
+ * Try to extract usage data from a transcript entry. Returns null if not found.
+ * Checks every location CodeBuddy transcripts use:
+ * message.usage → top-level usage → providerData.rawUsage → flat fields → content blocks.
+ */
+function extractUsage(entry) {
+    const raw = entry;
+    // Pattern 1: usage nested under `message` (assistant message records)
+    const message = raw['message'];
+    if (message && typeof message === 'object' && !Array.isArray(message)) {
+        const messageUsage = message['usage'];
+        if (messageUsage && typeof messageUsage === 'object') {
+            const parsed = parseUsageObject(messageUsage);
+            if (parsed)
+                return parsed;
+        }
+    }
+    // Pattern 2: usage on the entry itself
+    if (raw['usage'] && typeof raw['usage'] === 'object') {
+        const parsed = parseUsageObject(raw['usage']);
+        if (parsed)
+            return parsed;
+    }
+    // Pattern 3: tool call usage recorded by the CLI provider
+    const providerData = raw['providerData'];
+    if (providerData && typeof providerData === 'object') {
+        const rawUsage = providerData['rawUsage'];
+        if (rawUsage && typeof rawUsage === 'object') {
+            const parsed = parseUsageObject(rawUsage);
+            if (parsed)
+                return parsed;
+        }
+    }
+    // Pattern 4: flat token fields on the entry
+    const flat = parseUsageObject(raw);
+    if (flat)
+        return flat;
+    // Pattern 5: usage blocks inside a content array
     const content = raw['content'];
     if (Array.isArray(content)) {
         for (const item of content) {
             if (item && typeof item === 'object') {
                 const itemRec = item;
                 if (itemRec['type'] === 'usage' || itemRec['type'] === 'token_usage') {
-                    const input = Number(itemRec['input_tokens'] ?? itemRec['prompt_tokens'] ?? 0);
-                    const output = Number(itemRec['output_tokens'] ?? itemRec['completion_tokens'] ?? 0);
-                    if (input > 0 || output > 0) {
-                        return { inputTokens: input, outputTokens: output };
-                    }
+                    const parsed = parseUsageObject(itemRec);
+                    if (parsed)
+                        return parsed;
                 }
             }
         }
@@ -208,40 +323,47 @@ function buildSummary(entries) {
     let taskCounter = 0;
     // Track last assistant status
     let lastAssistantStatus = null;
-    // Track cumulative token usage
+    // Track the latest token usage record
     let totalInputTokens = 0;
     let totalOutputTokens = 0;
-    let contextWindow = 0;
+    let cacheReadTokens = 0;
+    let cacheCreationTokens = 0;
+    let cacheMissTokens = 0;
+    let hasCacheInfo = false;
+    let inputIncludesCache = false;
     let foundUsage = false;
     // Try to determine model id from entries (for context window estimation)
     let modelId = '';
     function getModelId(entry) {
         const raw = entry;
-        const m = raw['model'];
-        if (typeof m === 'string')
-            return m;
-        if (m && typeof m === 'object')
-            return m['id'] ?? '';
+        // The model id appears at the entry level, under `message`, or in `providerData`
+        for (const container of [raw, raw['message'], raw['providerData']]) {
+            if (!container || typeof container !== 'object')
+                continue;
+            const m = container['model'];
+            if (typeof m === 'string' && m)
+                return m;
+            if (m && typeof m === 'object') {
+                const id = m['id'];
+                if (typeof id === 'string' && id)
+                    return id;
+            }
+        }
         return '';
     }
     for (const entry of entries) {
         const type = entry.type;
-        // Try to extract usage data from any entry
-        if (!foundUsage) {
-            const usage = extractUsage(entry);
-            if (usage) {
-                totalInputTokens = usage.inputTokens;
-                totalOutputTokens = usage.outputTokens;
-                foundUsage = true;
-            }
-        }
-        else {
-            // Keep updating with latest usage data
-            const usage = extractUsage(entry);
-            if (usage) {
-                totalInputTokens = usage.inputTokens;
-                totalOutputTokens = usage.outputTokens;
-            }
+        // Keep the most recent usage record (the API reports cumulative counters)
+        const usage = extractUsage(entry);
+        if (usage) {
+            totalInputTokens = usage.inputTokens;
+            totalOutputTokens = usage.outputTokens;
+            cacheReadTokens = usage.cacheReadTokens;
+            cacheCreationTokens = usage.cacheCreationTokens;
+            cacheMissTokens = usage.cacheMissTokens;
+            hasCacheInfo = usage.hasCacheInfo;
+            inputIncludesCache = usage.inputIncludesCache;
+            foundUsage = true;
         }
         // Try to capture model id for context window estimation
         if (!modelId) {
@@ -354,12 +476,24 @@ function buildSummary(entries) {
     const cw = foundUsage ? estimateContextWindow(modelId) : 0;
     const totalTokens = totalInputTokens + totalOutputTokens;
     const percent = cw > 0 ? Math.round((totalTokens / cw) * 100) : -1;
+    // Cache hit rate = cached input tokens / total prompt tokens.
+    // Anthropic-style input_tokens excludes the cached portion, OpenAI-style includes it.
+    let promptTokens = totalInputTokens;
+    if (!inputIncludesCache) {
+        promptTokens += cacheReadTokens + cacheCreationTokens;
+    }
+    if (cacheMissTokens > 0) {
+        promptTokens = cacheReadTokens + cacheMissTokens;
+    }
+    const cacheHitRate = hasCacheInfo && promptTokens > 0 ? cacheReadTokens / promptTokens : -1;
     const contextUsage = foundUsage ? {
         inputTokens: totalInputTokens,
         outputTokens: totalOutputTokens,
         totalTokens,
         contextWindow: cw,
         percentUsed: percent,
+        cacheReadTokens,
+        cacheHitRate,
     } : null;
     return {
         toolStats,

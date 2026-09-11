@@ -45,6 +45,9 @@ interface I18nStrings {
   taskMore: string;
   tasksLabel: string;
 
+  // Context usage
+  cacheHit: string;
+
   // Duration format
   lessThanMinute: string;
   minute: string;
@@ -88,6 +91,8 @@ const EN: I18nStrings = {
   taskMore: '+{n} more',
   tasksLabel: 'Tasks',
 
+  cacheHit: '⚡cache',
+
   lessThanMinute: '<1m',
   minute: 'm',
   hour: 'h',
@@ -128,6 +133,8 @@ const ZH: I18nStrings = {
   taskProgress: '',
   taskMore: '+{n}更多',
   tasksLabel: '任务',
+
+  cacheHit: '⚡缓存',
 
   lessThanMinute: '<1分',
   minute: '分',

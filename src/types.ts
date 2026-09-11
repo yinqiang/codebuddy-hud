@@ -149,6 +149,10 @@ export interface ContextUsage {
   contextWindow: number;
   /** Percentage of context window used (0-100, -1 if unknown) */
   percentUsed: number;
+  /** Input tokens served from the prompt cache (0 if none) */
+  cacheReadTokens: number;
+  /** Prompt cache hit rate as a fraction (0-1), or -1 when cache data is unavailable */
+  cacheHitRate: number;
 }
 
 export interface TranscriptSummary {
@@ -210,6 +214,8 @@ export interface HudConfig {
     mode: ContextValueMode;
     /** Show input/output breakdown */
     showBreakdown: boolean;
+    /** Append the prompt cache hit rate to the context bar */
+    showCacheHit: boolean;
   };
 
   colors: {
@@ -259,6 +265,7 @@ export const DEFAULT_CONFIG: HudConfig = {
   contextBar: {
     mode: 'percent',
     showBreakdown: false,
+    showCacheHit: true,
   },
 
   colors: {
